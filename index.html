@@ -1,0 +1,2687 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>摸鱼小乌龟 v1.3</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='55' r='35' fill='%236bbf8a'/%3E%3Ccircle cx='80' cy='45' r='12' fill='%236bbf8a'/%3E%3C/svg%3E">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif; }
+  body {
+    background: linear-gradient(180deg, #c9e9f5 0%, #a8d8ea 40%, #7fc4dd 100%);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 16px;
+    overflow-x: hidden;
+    user-select: none;
+  }
+
+  /* ===== 顶部状态栏 ===== */
+  .topbar {
+    width: 100%;
+    max-width: 480px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(255,255,255,0.7);
+    backdrop-filter: blur(8px);
+    border-radius: 16px;
+    padding: 10px 16px;
+    box-shadow: 0 2px 10px rgba(0,80,120,0.1);
+    margin-bottom: 12px;
+  }
+  .stat { display: flex; align-items: center; gap: 6px; font-size: 14px; color: #2c5a6e; font-weight: 600; }
+  .stat .icon { font-size: 18px; }
+  .stat .num { font-variant-numeric: tabular-nums; }
+
+  /* ===== 池塘 ===== */
+  .pond {
+    width: 100%;
+    max-width: 480px;
+    aspect-ratio: 16/10;
+    background: radial-gradient(ellipse at center, #8fd4e8 0%, #5fb3d1 70%, #4a9cc0 100%);
+    border-radius: 24px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: inset 0 8px 24px rgba(0,60,100,0.25), 0 4px 16px rgba(0,80,120,0.15);
+    margin-bottom: 12px;
+  }
+  /* 水面波纹 */
+  .pond::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(circle at 20% 30%, rgba(255,255,255,0.25) 0%, transparent 8%),
+      radial-gradient(circle at 70% 60%, rgba(255,255,255,0.18) 0%, transparent 6%),
+      radial-gradient(circle at 40% 80%, rgba(255,255,255,0.15) 0%, transparent 7%);
+    pointer-events: none;
+  }
+  /* 水草装饰 */
+  .seaweed {
+    position: absolute;
+    bottom: 0;
+    width: 14px;
+    background: linear-gradient(180deg, #4a9d6e, #2d7a4f);
+    border-radius: 8px 8px 0 0;
+    transform-origin: bottom center;
+    animation: sway 3.5s ease-in-out infinite;
+  }
+  .seaweed.s1 { left: 8%;  height: 60px; animation-delay: 0s; }
+  .seaweed.s2 { left: 88%; height: 80px; animation-delay: 0.8s; width: 18px; }
+  .seaweed.s3 { left: 50%; height: 40px; animation-delay: 1.6s; width: 10px; opacity: 0.7; }
+  @keyframes sway {
+    0%, 100% { transform: rotate(-6deg); }
+    50%      { transform: rotate(6deg); }
+  }
+
+  /* 气泡 */
+  .bubble {
+    position: absolute;
+    bottom: -20px;
+    background: rgba(255,255,255,0.5);
+    border-radius: 50%;
+    animation: rise linear infinite;
+  }
+  @keyframes rise {
+    0%   { transform: translateY(0) scale(0.6); opacity: 0; }
+    10%  { opacity: 0.8; }
+    100% { transform: translateY(-380px) scale(1.2); opacity: 0; }
+  }
+
+  /* ===== 乌龟 ===== */
+  .turtle-wrap {
+    position: absolute;
+    left: 50%;
+    top: 55%;
+    transform: translate(-50%, -50%);
+    animation: float 3s ease-in-out infinite;
+    cursor: pointer;
+    transition: transform 0.3s;
+  }
+  .turtle-wrap:active { transform: translate(-50%, -50%) scale(0.95); }
+  @keyframes float {
+    0%, 100% { transform: translate(-50%, -55%); }
+    50%      { transform: translate(-50%, -60%); }
+  }
+  .turtle-svg { width: 160px; height: auto; display: block; }
+
+  /* 点击爱心 */
+  .heart {
+    position: absolute;
+    font-size: 20px;
+    pointer-events: none;
+    animation: heartFly 1s ease-out forwards;
+    color: #ff6b8a;
+    font-weight: bold;
+  }
+  @keyframes heartFly {
+    0%   { transform: translateY(0) scale(0.5); opacity: 1; }
+    100% { transform: translateY(-80px) scale(1.3); opacity: 0; }
+  }
+
+  /* ===== 状态条 ===== */
+  .panel {
+    width: 100%;
+    max-width: 480px;
+    background: rgba(255,255,255,0.75);
+    backdrop-filter: blur(8px);
+    border-radius: 16px;
+    padding: 12px 16px;
+    box-shadow: 0 2px 10px rgba(0,80,120,0.1);
+    margin-bottom: 12px;
+  }
+  .bar-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 6px 0;
+  }
+  .bar-label {
+    width: 48px;
+    font-size: 13px;
+    color: #2c5a6e;
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+  .bar-track {
+    flex: 1;
+    height: 10px;
+    background: rgba(44,90,110,0.12);
+    border-radius: 5px;
+    overflow: hidden;
+  }
+  .bar-fill {
+    height: 100%;
+    border-radius: 5px;
+    transition: width 0.4s ease;
+  }
+  .fill-hungry { background: linear-gradient(90deg, #ffb84d, #ff8c42); }
+  .fill-mood   { background: linear-gradient(90deg, #ff8fb3, #ff5c8a); }
+  .fill-clean  { background: linear-gradient(90deg, #7fd6a0, #3cb371); }
+
+  /* ===== 按钮 ===== */
+  .actions {
+    width: 100%;
+    max-width: 480px;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .btn-boost { background: linear-gradient(180deg, #a89ee8, #7e6bd4); }
+  .btn-challenge {
+    grid-column: span 2;
+    background: linear-gradient(180deg, #ff7a7a, #e04545);
+  }
+  .btn-adventure {
+    grid-column: span 2;
+    background: linear-gradient(180deg, #5ca8e8, #3a7ac4);
+  }
+  .btn-wardrobe { background: linear-gradient(180deg, #f49ac1, #d96aa0); }
+  .btn-decor    { background: linear-gradient(180deg, #6fd4c2, #3aa892); }
+  .btn-plaza    { background: linear-gradient(180deg, #c9a8e8, #9c73c4); }
+
+  /* 次级功能按钮行 */
+  .sub-actions {
+    width: 100%;
+    max-width: 480px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .sub-btn {
+    border: none;
+    border-radius: 12px;
+    padding: 10px 4px;
+    font-size: 12px;
+    font-weight: 600;
+    color: white;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    box-shadow: 0 2px 0 rgba(0,0,0,0.15);
+  }
+  .sub-btn .emoji { font-size: 18px; }
+  .sub-btn .cost { font-size: 9px; opacity: 0.9; font-weight: 400; }
+  .sub-challenge { background: linear-gradient(180deg, #ff7a7a, #e04545); }
+  .sub-adventure { background: linear-gradient(180deg, #5ca8e8, #3a7ac4); }
+  .sub-plaza     { background: linear-gradient(180deg, #c9a8e8, #9c73c4); }
+  .sub-wardrobe  { background: linear-gradient(180deg, #f49ac1, #d96aa0); }
+  .sub-decor     { background: linear-gradient(180deg, #6fd4c2, #3aa892); }
+
+  /* ===== 闯关模式 ===== */
+  .game-overlay {
+    position: fixed;
+    inset: 0;
+    background: linear-gradient(180deg, #c9e9f5 0%, #7fc4dd 100%);
+    z-index: 200;
+    display: none;
+    flex-direction: column;
+    padding: 16px;
+  }
+  .game-overlay.active { display: flex; }
+  .game-hud {
+    width: 100%;
+    max-width: 480px;
+    margin: 0 auto 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(255,255,255,0.8);
+    border-radius: 14px;
+    padding: 10px 14px;
+    font-size: 14px;
+    color: #2c5a6e;
+    font-weight: 600;
+  }
+  .game-hud .quit {
+    background: #ddd;
+    border: none;
+    border-radius: 12px;
+    padding: 4px 12px;
+    font-size: 12px;
+    cursor: pointer;
+    color: #555;
+  }
+  .game-arena {
+    flex: 1;
+    max-width: 480px;
+    width: 100%;
+    margin: 0 auto;
+    background: radial-gradient(ellipse at center, #8fd4e8 0%, #5fb3d1 70%, #4a9cc0 100%);
+    border-radius: 24px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: inset 0 8px 24px rgba(0,60,100,0.25);
+  }
+  .mole {
+    position: absolute;
+    width: 60px;
+    height: 50px;
+    cursor: pointer;
+    transform: translateY(120%);
+    transition: transform 0.15s ease-out;
+    pointer-events: auto;
+  }
+  .mole.up { transform: translateY(0); }
+  .mole svg { width: 100%; height: 100%; display: block; }
+  .score-pop {
+    position: absolute;
+    font-size: 18px;
+    font-weight: bold;
+    color: #ffd700;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    pointer-events: none;
+    animation: heartFly 0.8s ease-out forwards;
+  }
+  .game-result {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,40,70,0.85);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    text-align: center;
+    padding: 20px;
+  }
+  .game-result h2 { font-size: 26px; margin-bottom: 8px; }
+  .game-result p  { font-size: 14px; margin-bottom: 20px; opacity: 0.9; }
+  .game-result .btns { display: flex; gap: 10px; }
+  .game-result button {
+    border: none;
+    border-radius: 20px;
+    padding: 10px 22px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .btn-retry  { background: #ff8c42; color: white; }
+  .btn-exit   { background: white; color: #333; }
+  .countdown {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 80px;
+    font-weight: 900;
+    color: white;
+    text-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    pointer-events: none;
+  }
+
+  /* ===== 冒险模式 ===== */
+  .adv-overlay {
+    position: fixed;
+    inset: 0;
+    background: #5c94b8;
+    z-index: 300;
+    display: none;
+    flex-direction: column;
+    padding: 10px;
+    overflow: hidden;
+  }
+  .adv-overlay.active { display: flex; }
+  .adv-hud {
+    max-width: 960px;
+    width: 100%;
+    margin: 0 auto 6px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: white;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .adv-hud button {
+    background: rgba(255,255,255,0.25);
+    border: none;
+    color: white;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    cursor: pointer;
+  }
+  .adv-canvas-wrap {
+    max-width: 960px;
+    width: 100%;
+    margin: 0 auto;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  #advCanvas {
+    width: 100%;
+    flex: 1;
+    background: #7ec8e8;
+    border-radius: 12px;
+    display: block;
+  }
+  .adv-touch {
+    margin-top: 8px;
+    display: flex;
+    justify-content: space-between;
+    padding: 0 10px;
+  }
+  .adv-touch .pad { display: flex; gap: 10px; }
+  .tbtn2 {
+    width: 56px; height: 56px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.25);
+    border: 2px solid rgba(255,255,255,0.5);
+    color: white;
+    font-size: 22px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .adv-modal {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,30,60,0.85);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    text-align: center;
+    z-index: 10;
+    padding: 20px;
+  }
+  .adv-modal h2 { font-size: 28px; margin-bottom: 10px; }
+  .adv-modal p  { font-size: 13px; line-height: 1.7; margin-bottom: 20px; opacity: 0.9; }
+  .adv-modal button {
+    background: #ff8c42;
+    color: white;
+    border: none;
+    padding: 12px 32px;
+    border-radius: 24px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .adv-modal.hidden { display: none; }
+
+  /* ===== 通用商店/弹层 ===== */
+  .shop-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,30,60,0.85);
+    z-index: 400;
+    display: none;
+    overflow-y: auto;
+    padding: 20px;
+  }
+  .shop-overlay.active { display: block; }
+  .shop-card {
+    max-width: 480px;
+    margin: 0 auto;
+    background: white;
+    border-radius: 20px;
+    padding: 20px;
+  }
+  .shop-card h2 { color: #2c5a6e; margin-bottom: 4px; font-size: 20px; }
+  .shop-card .sub { color: #888; font-size: 12px; margin-bottom: 16px; }
+  .shop-tabs {
+    display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px;
+  }
+  .shop-tab {
+    padding: 6px 12px; border-radius: 14px;
+    background: #eef2f5; color: #666; font-size: 12px;
+    cursor: pointer; border: none;
+  }
+  .shop-tab.active { background: #ff8c42; color: white; }
+  .shop-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+  .shop-item {
+    background: #f7fafc;
+    border-radius: 12px;
+    padding: 10px 6px;
+    text-align: center;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: transform 0.1s;
+  }
+  .shop-item:hover { transform: translateY(-2px); }
+  .shop-item.equipped { border-color: #ff8c42; background: #fff5ec; }
+  .shop-item .preview {
+    height: 50px;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 4px;
+  }
+  .shop-item .name { font-size: 11px; color: #444; margin-bottom: 2px; }
+  .shop-item .price { font-size: 11px; color: #ff8c42; font-weight: 600; }
+  .shop-item .owned { font-size: 11px; color: #3cb371; font-weight: 600; }
+  .shop-close {
+    display: block; margin: 16px auto 0;
+    background: #666; color: white; border: none;
+    padding: 10px 28px; border-radius: 20px; font-size: 14px; cursor: pointer;
+  }
+
+  /* ===== 广场 ===== */
+  .plaza-overlay {
+    position: fixed; inset: 0;
+    background: linear-gradient(180deg, #c9e9f5, #7fc4dd);
+    z-index: 400;
+    display: none;
+    flex-direction: column;
+    padding: 16px;
+    overflow-y: auto;
+  }
+  .plaza-overlay.active { display: flex; }
+  .plaza-header {
+    max-width: 480px; width: 100%; margin: 0 auto 12px;
+    display: flex; justify-content: space-between; align-items: center;
+    color: #2c5a6e;
+  }
+  .plaza-header h2 { font-size: 20px; }
+  .plaza-header button {
+    background: rgba(255,255,255,0.7); border: none;
+    padding: 6px 14px; border-radius: 14px; font-size: 12px; cursor: pointer;
+  }
+  .plaza-grid {
+    max-width: 480px; width: 100%;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+  .turtle-card {
+    background: rgba(255,255,255,0.85);
+    border-radius: 14px;
+    padding: 12px;
+    text-align: center;
+  }
+  .turtle-card .avatar {
+    height: 70px;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 6px;
+  }
+  .turtle-card .tname { font-size: 14px; font-weight: 700; color: #2c5a6e; }
+  .turtle-card .tid { font-size: 10px; color: #999; margin-bottom: 4px; }
+  .turtle-card .tstats { font-size: 11px; color: #666; }
+  .turtle-card.me { border: 2px solid #ff8c42; }
+  .plaza-tip {
+    max-width: 480px; margin: 12px auto 0;
+    background: rgba(255,255,255,0.6);
+    border-radius: 12px; padding: 10px 14px;
+    font-size: 12px; color: #555; text-align: center;
+  }
+  .btn {
+    border: none;
+    border-radius: 14px;
+    padding: 12px 8px;
+    font-size: 14px;
+    font-weight: 600;
+    color: white;
+    cursor: pointer;
+    box-shadow: 0 3px 0 rgba(0,0,0,0.15);
+    transition: transform 0.1s, box-shadow 0.1s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+  .btn:active { transform: translateY(2px); box-shadow: 0 1px 0 rgba(0,0,0,0.15); }
+  .btn .cost { font-size: 11px; opacity: 0.9; font-weight: 400; }
+  .btn-feed  { background: linear-gradient(180deg, #ffb84d, #ff8c42); }
+  .btn-play  { background: linear-gradient(180deg, #ff8fb3, #ff5c8a); }
+  .btn-clean { background: linear-gradient(180deg, #7fd6a0, #3cb371); }
+
+  /* ===== 等级信息 ===== */
+  .level-info {
+    width: 100%;
+    max-width: 480px;
+    text-align: center;
+    color: #2c5a6e;
+    font-size: 13px;
+    margin-bottom: 8px;
+    font-weight: 500;
+  }
+  .level-info b { color: #ff8c42; }
+
+  /* 升级提示 */
+  .toast {
+    position: fixed;
+    top: 30%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(44,90,110,0.9);
+    color: white;
+    padding: 12px 24px;
+    border-radius: 24px;
+    font-size: 14px;
+    font-weight: 600;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s;
+    z-index: 99;
+  }
+  .toast.show { opacity: 1; }
+
+  /* 离线提示 */
+  .offline-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    padding: 20px;
+  }
+  .offline-card {
+    background: white;
+    border-radius: 20px;
+    padding: 24px;
+    max-width: 320px;
+    width: 100%;
+    text-align: center;
+  }
+  .offline-card h3 { color: #2c5a6e; margin-bottom: 10px; font-size: 18px; }
+  .offline-card p { color: #555; font-size: 14px; line-height: 1.6; margin-bottom: 16px; }
+  .offline-card button {
+    background: #ff8c42;
+    color: white;
+    border: none;
+    padding: 10px 28px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  /* 移动端适配（手机/平板） */
+  @media (max-width: 768px) {
+    body { padding: 10px; }
+    .topbar, .pond, .panel, .actions, .sub-actions, .game-hud, .game-arena, .adv-hud {
+      max-width: 100%;
+    }
+    .turtle-svg { width: 130px; }
+    .stat { font-size: 12px; }
+    .stat .icon { font-size: 16px; }
+    /* 冒险画布自适应 */
+    .adv-canvas-wrap canvas { width: 100% !important; height: auto !important; }
+    .adv-canvas-wrap { width: 100%; }
+    /* 覆盖层卡片在手机上占满 */
+    .shop-card, .plaza-card, .game-modal, .adv-modal { width: 92vw; max-width: 400px; }
+    .shop-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .plaza-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .auth-card { max-width: 100%; padding: 24px 18px; }
+    .pond { aspect-ratio: 16/10; }
+  }
+  @media (max-width: 400px) {
+    body { padding: 6px; }
+    .actions { grid-template-columns: repeat(2, 1fr); gap: 6px; }
+    .sub-actions { grid-template-columns: repeat(3, 1fr); gap: 5px; }
+    .topbar { padding: 8px 10px; }
+    .btn { font-size: 13px; padding: 10px 6px; }
+    .sub-btn { font-size: 11px; padding: 8px 3px; }
+  }
+
+  /* ===== 登录界面 ===== */
+  .auth-overlay {
+    position: fixed; inset: 0; z-index: 999;
+    background: linear-gradient(180deg, #c9e9f5 0%, #7fc4dd 100%);
+    display: flex; align-items: center; justify-content: center; padding: 16px;
+  }
+  .auth-overlay.hidden { display: none; }
+  .auth-card {
+    width: 100%; max-width: 360px; background: rgba(255,255,255,0.92);
+    border-radius: 24px; padding: 28px 24px; box-shadow: 0 8px 30px rgba(0,60,100,0.2);
+    text-align: center;
+  }
+  .auth-card h1 { font-size: 26px; color: #2c5a6e; margin-bottom: 4px; }
+  .auth-card .sub { color: #5a8295; font-size: 13px; margin-bottom: 20px; }
+  .auth-field { width: 100%; padding: 12px 14px; border: 2px solid #cfe3ee; border-radius: 12px; font-size: 15px; margin-bottom: 10px; box-sizing: border-box; }
+  .auth-field:focus { outline: none; border-color: #7fc4dd; }
+  .auth-btn { width: 100%; padding: 13px; border: none; border-radius: 12px; font-size: 15px; font-weight: 700; cursor: pointer; color: #fff; background: linear-gradient(180deg, #5ca8e8, #3a7ac4); margin-top: 6px; }
+  .auth-btn.secondary { background: linear-gradient(180deg, #6fd4c2, #3aa892); margin-top: 10px; }
+  .auth-switch { margin-top: 16px; font-size: 13px; color: #5a8295; }
+  .auth-switch a { color: #3a7ac4; cursor: pointer; font-weight: 600; }
+  .auth-err { color: #e04545; font-size: 13px; min-height: 18px; margin-top: 8px; }
+  .auth-hint { font-size: 11px; color: #9ab8c9; margin-top: 10px; }
+  .auth-userrow { display: flex; gap: 8px; margin-bottom: 4px; }
+  .auth-userfield { flex: 1; margin-bottom: 0; }
+  .auth-dice {
+    flex-shrink: 0; padding: 0 14px; border: none; border-radius: 12px;
+    background: linear-gradient(180deg, #ffb84d, #ff8c42); color: #fff;
+    font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap;
+  }
+  .auth-dice:active { transform: scale(0.95); }
+  .auth-taken { font-size: 12px; min-height: 16px; margin: 2px 0 8px; text-align: left; padding-left: 2px; }
+  .auth-taken.ok { color: #3cb371; }
+  .auth-taken.taken { color: #e04545; }
+  .auth-taken.checking { color: #9ab8c9; }
+  .userbar { display:flex; align-items:center; gap:6px; }
+  .userbar .uname { font-size:12px; color:#2c5a6e; font-weight:600; max-width:70px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .userbar .logout { font-size:11px; color:#e04545; cursor:pointer; background:none; border:none; padding:0; font-weight:600; }
+
+  /* ===== 界面美化：清新可爱风（覆盖式，保持功能不变） ===== */
+  body { background: linear-gradient(180deg, #dff3fb 0%, #bfe8f4 45%, #9fd9ec 100%); }
+  .topbar {
+    background: rgba(255,255,255,0.85);
+    box-shadow: 0 4px 18px rgba(64,150,190,0.18);
+    border: 1px solid rgba(255,255,255,0.7);
+  }
+  .btn {
+    border-radius: 16px;
+    box-shadow: 0 4px 0 rgba(0,0,0,0.12), 0 6px 16px rgba(0,90,130,0.14);
+    border: 1px solid rgba(255,255,255,0.35);
+  }
+  .btn:hover { transform: translateY(-1px); box-shadow: 0 5px 0 rgba(0,0,0,0.12), 0 8px 20px rgba(0,90,130,0.2); }
+  .btn-feed  { background: linear-gradient(180deg, #ffc46b, #ff9a3d); }
+  .btn-play  { background: linear-gradient(180deg, #ffa3c0, #ff6b96); }
+  .btn-clean { background: linear-gradient(180deg, #8fe0ae, #43bd7c); }
+  .pond {
+    box-shadow: inset 0 8px 24px rgba(0,60,100,0.22), 0 8px 24px rgba(70,160,200,0.25);
+    border: 2px solid rgba(255,255,255,0.6);
+    /* 横屏家：房子+院子 */
+    aspect-ratio: 16/10;
+    background:
+      linear-gradient(180deg, rgba(255,253,240,0.55) 0%, rgba(255,255,255,0) 34%),
+      radial-gradient(ellipse at center, #8fd4e8 0%, #5fb3d1 65%, #4a9cc0 100%);
+  }
+  /* 房子区（家场景上方） */
+  .house {
+    width: 120px;
+    height: 96px;
+    background: linear-gradient(180deg, #fff7e6, #ffe3bd);
+    border: 2px solid #e8c18a;
+    border-radius: 18px;
+    box-shadow: 0 6px 18px rgba(180,130,70,0.25), inset 0 0 0 1px rgba(255,255,255,0.6);
+    position: absolute;
+    top: 12px;
+    right: 16px;
+    z-index: 6;
+  }
+  .house svg { width: 100%; height: 100%; }
+  .house-label {
+    position: absolute;
+    bottom: 6px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 11px;
+    color: #fff;
+    background: rgba(190,140,80,0.85);
+    border-radius: 8px;
+    padding: 1px 8px;
+  }
+  /* 乌龟自由移动 */
+  .turtle-wrap {
+    position: absolute;
+    left: 30%;
+    bottom: 18%;
+    animation: turtleWander 14s ease-in-out infinite alternate;
+    z-index: 4;
+  }
+  @keyframes turtleWander {
+    0%   { transform: translate(0, 0) rotate(-2deg); }
+    30%  { transform: translate(-40px, -12px) rotate(2deg); }
+    60%  { transform: translate(-80px, 8px) rotate(-1deg); }
+    100% { transform: translate(-20px, -4px) rotate(2deg); }
+  }
+  .turtle-card, .panel, .shop-card, .plaza-card, .game-modal, .adv-modal, .auth-card, .level-info {
+    background: rgba(255,255,255,0.9);
+    box-shadow: 0 6px 24px rgba(70,150,190,0.16);
+    border: 1px solid rgba(255,255,255,0.8);
+  }
+  .turtle-card { border-radius: 18px; }
+  .sub-btn {
+    border-radius: 14px;
+    box-shadow: 0 3px 0 rgba(0,0,0,0.1);
+    border: 1px solid rgba(255,255,255,0.4);
+  }
+  .stat { color: #1f4f63; }
+  /* 乌龟轻微漂浮动画 */
+  .turtle-svg { animation: turtleFloat 3.5s ease-in-out infinite; }
+  @keyframes turtleFloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+
+  /* ===== 主界面：家 + 侧边栏 ===== */
+  .main-layout {
+    width: 100%;
+    max-width: 720px;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    margin: 0 auto;
+  }
+  .home-view {
+    flex: 1;
+    min-width: 0;
+  }
+  .sidebar {
+    width: 92px;
+    flex-shrink: 0;
+    background: rgba(255,255,255,0.85);
+    border-radius: 20px;
+    padding: 12px 8px;
+    box-shadow: 0 6px 24px rgba(70,150,190,0.16);
+    border: 1px solid rgba(255,255,255,0.8);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .sidebar-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  /* 侧边栏折叠按钮 */
+  .sidebar-toggle {
+    border: none;
+    background: rgba(255,255,255,0.6);
+    border-radius: 12px;
+    font-size: 18px;
+    line-height: 1;
+    color: #2c5a6e;
+    cursor: pointer;
+    padding: 4px 0;
+    box-shadow: 0 2px 0 rgba(0,0,0,0.08);
+  }
+  .sidebar-toggle:hover { background: rgba(255,255,255,0.9); }
+  .sidebar-body { display: flex; flex-direction: column; gap: 10px; }
+  .sidebar.closed .sidebar-body { display: none; }
+  .sidebar.closed { width: 44px; padding: 12px 4px; }
+  .sidebar .toggle-closed { display: none; }
+  .sidebar.closed .toggle-open { display: none; }
+  .sidebar.closed .toggle-closed { display: inline; }
+  .sidebar-divider {
+    height: 1px;
+    background: rgba(70,150,190,0.15);
+    margin: 2px 4px;
+  }
+  .sbtn {
+    border: none;
+    background: rgba(255,255,255,0.75);
+    border-radius: 14px;
+    padding: 8px 4px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    cursor: pointer;
+    font-size: 10px;
+    color: #2c5a6e;
+    font-weight: 600;
+    box-shadow: 0 2px 0 rgba(0,0,0,0.08);
+    transition: transform 0.1s, box-shadow 0.1s;
+  }
+  .sbtn .emoji { font-size: 20px; line-height: 1; }
+  .sbtn:hover { transform: translateY(-1px); box-shadow: 0 3px 0 rgba(0,0,0,0.1), 0 6px 14px rgba(70,150,190,0.2); }
+  .sbtn:active { transform: translateY(1px); box-shadow: 0 1px 0 rgba(0,0,0,0.08); }
+  .sbtn-feed  { background: linear-gradient(180deg, #ffe9c4, #ffd99a); }
+  .sbtn-play  { background: linear-gradient(180deg, #ffe0ea, #ffc1d4); }
+  .sbtn-clean { background: linear-gradient(180deg, #d9f6e3, #b5ead0); }
+  .sbtn-boost { background: linear-gradient(180deg, #d9e9ff, #b8d3f7); }
+  .sbtn-mail  { background: linear-gradient(180deg, #ece3ff, #d9c9f7); }
+
+  /* 小屋（旧样式已被新版覆盖，此处保留 hover 提示） */
+  .house:hover { transform: scale(1.06); }
+  .house-label { color: #fff; font-size: 11px; }
+
+  /* 手机：画面固定大小，页面可滚动 */
+  @media (max-width: 520px) {
+    html, body { min-width: 0; width: 100%; overflow-x: hidden; }
+    body { padding: 6px; }
+    .main-layout {
+      flex-direction: column;
+      width: 100%;
+      margin: 0 auto;
+      gap: 6px;
+    }
+    .home-view { width: 100%; }
+    .pond { width: 100%; aspect-ratio: auto; height: 60vh; }
+    .panel { width: 100%; }
+    .level-info { width: 100%; }
+    .topbar { width: 100%; }
+    .sidebar {
+      width: 100%;
+      flex-direction: row;
+      justify-content: space-around;
+      align-items: stretch;
+      gap: 6px;
+      padding: 8px 6px;
+    }
+    .sidebar-group { flex-direction: row; gap: 6px; flex-wrap: wrap; justify-content: center; }
+    .sidebar-divider { display: none; }
+    .sbtn { min-width: 0; flex: 1; padding: 6px 2px; }
+    .sbtn .emoji { font-size: 18px; }
+  }
+
+  /* ===== 邮箱 ===== */
+  .mail-overlay {
+    position: fixed; inset: 0; z-index: 998;
+    background: rgba(20,60,90,0.5);
+    display: flex; align-items: center; justify-content: center; padding: 16px;
+  }
+  .mail-overlay.hidden { display: none; }
+  .mail-card {
+    width: 100%; max-width: 420px;
+    background: rgba(255,255,255,0.95);
+    border-radius: 22px;
+    box-shadow: 0 8px 30px rgba(0,60,100,0.2);
+    padding: 20px;
+  }
+  .mail-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+  .mail-header h2 { font-size: 20px; color: #2c5a6e; margin: 0; }
+  .mail-header button { border: none; background: #e04545; color: #fff; border-radius: 10px; padding: 6px 12px; cursor: pointer; font-size: 13px; }
+  .mail-list { display: flex; flex-direction: column; gap: 10px; max-height: 50vh; overflow-y: auto; }
+  .mail-empty { text-align: center; color: #9ab8c9; padding: 30px 0; font-size: 14px; }
+  .mail-item {
+    background: #f3fafd;
+    border: 1px solid #d9ecf5;
+    border-radius: 14px;
+    padding: 12px 14px;
+  }
+  .mail-item .from { font-weight: 700; color: #2c5a6e; font-size: 14px; margin-bottom: 4px; }
+  .mail-item .text { color: #48697a; font-size: 13px; line-height: 1.5; }
+  .mail-item .time { color: #9ab8c9; font-size: 11px; margin-top: 6px; }
+  .mail-tip { margin-top: 12px; text-align: center; color: #9ab8c9; font-size: 12px; }
+  /* 拜访别人家 */
+  /* 拜访：全屏进入他家 */
+  .visit-overlay {
+    position: fixed; inset: 0; z-index: 997;
+    background: linear-gradient(180deg, #dff3fb 0%, #bfe8f4 45%, #9fd9ec 100%);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .visit-overlay.hidden { display: none; }
+  .visit-scene {
+    width: 100%; height: 100%; max-width: 720px;
+    position: relative;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: space-between;
+    padding: 24px 16px 30px;
+    box-sizing: border-box;
+    background:
+      linear-gradient(180deg, rgba(255,253,240,0.5) 0%, rgba(255,255,255,0) 40%),
+      radial-gradient(ellipse at center, #8fd4e8 0%, #5fb3d1 70%, #4a9cc0 100%);
+    border-radius: 24px;
+  }
+  .visit-top {
+    width: 100%;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 10px;
+    background: rgba(255,255,255,0.85);
+    border-radius: 16px;
+    padding: 10px 14px;
+    box-shadow: 0 4px 18px rgba(64,150,190,0.18);
+  }
+  .visit-title { font-size: 16px; color: #2c5a6e; font-weight: 700; }
+  .visit-stat { font-size: 13px; color: #2c5a6e; font-weight: 600; }
+  .visit-home {
+    position: relative;
+    flex: 1;
+    width: 100%;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 10px;
+  }
+  .visit-house { position: absolute; top: 6px; right: 14px; }
+  .visit-avatar {
+    animation: turtleFloat 3.5s ease-in-out infinite;
+  }
+  .visit-grass {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    height: 26px;
+    background: linear-gradient(180deg, #7fd6a0, #4ea975);
+    border-radius: 16px 16px 0 0;
+  }
+  .visit-actions { display: flex; gap: 12px; justify-content: center; width: 100%; }
+  .visit-btn { border: none; background: linear-gradient(180deg, #5ca8e8, #3a7ac4); color: #fff; border-radius: 16px; padding: 12px 22px; cursor: pointer; font-size: 15px; font-weight: 700; box-shadow: 0 4px 0 rgba(0,0,0,0.12); }
+  .visit-btn.secondary { background: linear-gradient(180deg, #6fd4c2, #3aa892); }
+  .visit-hint { font-size: 11px; color: #5ca8e8; margin-top: 6px; }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+<script>
+// 阻止移动端页面缩放（双指 / 双击）
+document.addEventListener('touchmove', function(e){ if(e.touches && e.touches.length>1){ e.preventDefault(); } }, {passive:false});
+var lastTap = 0;
+document.addEventListener('touchend', function(e){ var now = Date.now(); if(now - lastTap < 400){ e.preventDefault(); } lastTap = now; }, {passive:false});
+document.addEventListener('gesturestart', function(e){ e.preventDefault(); });
+</script>
+
+<!-- ===== 登录/注册界面 ===== -->
+<div class="auth-overlay" id="authOverlay">
+  <div class="auth-card">
+    <h1>🐢 摸鱼小乌龟</h1>
+    <div class="sub" id="authSub">登录后存档会保存到云端，换设备也不丢</div>
+    <div class="auth-userrow">
+      <input class="auth-field auth-userfield" id="authUser" placeholder="用户名（登录用）" autocomplete="username">
+      <button class="auth-dice" id="authDice" onclick="randomName()" title="随机起个名字">🎲 随机</button>
+    </div>
+    <div class="auth-taken" id="authTaken"></div>
+    <input class="auth-field" id="authPass" type="password" placeholder="密码" autocomplete="current-password">
+    <input class="auth-field" id="authEmail" type="email" placeholder="邮箱（可选，用于找回密码）" autocomplete="email" style="display:none">
+    <div class="auth-err" id="authErr"></div>
+    <button class="auth-btn" id="authBtn" onclick="authSubmit()">登 录</button>
+    <button class="auth-btn secondary" id="authSwitchBtn" onclick="authSwitchMode()">注册新账号</button>
+    <div class="auth-hint">用户名+密码即可注册，不用邮箱验证</div>
+  </div>
+</div>
+
+<!-- 顶部 -->
+<div class="topbar">
+  <div class="stat">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" fill="#ffc94d" stroke="#e8a820" stroke-width="1.5"/><text x="12" y="16" text-anchor="middle" font-size="11" font-weight="bold" fill="#b07a10">¥</text></svg>
+    <span class="num" id="coins">0</span>
+  </div>
+  <div class="stat">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="#ffb84d"><path d="M12 2l3 7h7l-5.5 4.5L18.5 21 12 16.5 5.5 21l2-7.5L2 9h7z"/></svg>
+    <span>Lv.<span class="num" id="level">1</span></span>
+  </div>
+  <div class="stat">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2c5a6e" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+    <span class="num" id="age">0秒</span>
+  </div>
+  <div class="stat" id="bgmBtn" onclick="toggleBGM()" style="cursor:pointer;">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="#2c5a6e"><path d="M9 18V6l8-2v12h-2.5v-7.5L11 8.5V18z"/></svg>
+    <span id="bgmTxt">音乐</span>
+  </div>
+  <div class="userbar" id="userbar">
+    <span class="uname" id="currentUser"></span>
+    <button class="logout" id="logoutBtn" onclick="doLogout()" style="display:none">退出</button>
+  </div>
+</div>
+
+<!-- ===== 主界面 ===== -->
+<div class="main-layout">
+  <!-- 家的主画面 -->
+  <div class="home-view">
+    <!-- 池塘 -->
+    <div class="pond" id="pond">
+      <div class="seaweed s1"></div>
+      <div class="seaweed s2"></div>
+      <div class="seaweed s3"></div>
+      <div class="turtle-wrap" id="turtleWrap">
+        <!-- 乌龟 SVG -->
+        <svg class="turtle-svg" viewBox="0 0 200 160" id="turtleSvg">
+          <!-- 尾巴 -->
+          <ellipse cx="25" cy="90" rx="10" ry="6" fill="#5a9e6e" />
+          <!-- 四条腿 -->
+          <ellipse cx="55"  cy="125" rx="14" ry="9" fill="#5a9e6e" />
+          <ellipse cx="130" cy="125" rx="14" ry="9" fill="#5a9e6e" />
+          <ellipse cx="55"  cy="55"  rx="12" ry="8" fill="#6ab57e" />
+          <ellipse cx="130" cy="55"  rx="12" ry="8" fill="#6ab57e" />
+          <!-- 壳 -->
+          <ellipse cx="90" cy="90" rx="60" ry="45" fill="#6bbf8a" id="shellBody"/>
+          <!-- 壳花纹 -->
+          <ellipse cx="90" cy="90" rx="45" ry="32" fill="none" stroke="#4a9e6b" stroke-width="2" opacity="0.6"/>
+          <ellipse cx="90" cy="90" rx="28" ry="20" fill="none" stroke="#4a9e6b" stroke-width="2" opacity="0.6"/>
+          <!-- 壳高光 -->
+          <ellipse cx="75" cy="75" rx="18" ry="10" fill="rgba(255,255,255,0.3)"/>
+          <!-- 头 -->
+          <circle cx="155" cy="85" r="22" fill="#7ccb92" id="turtleHead"/>
+          <!-- 眼睛 -->
+          <g id="eyes">
+            <circle cx="163" cy="80" r="4" fill="#2c3e50"/>
+            <circle cx="164" cy="79" r="1.3" fill="white"/>
+          </g>
+          <!-- 嘴 -->
+          <path d="M 165 92 Q 170 95 175 92" stroke="#2c3e50" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+          <!-- 腮红 -->
+          <circle cx="158" cy="90" r="3" fill="rgba(255,150,150,0.5)"/>
+        </svg>
+      </div>
+      <!-- 小屋（家的入口） -->
+      <div class="house" id="houseBtn" onclick="openHouse()" title="我的小屋">
+        <svg viewBox="0 0 120 96">
+          <!-- 屋顶 -->
+          <path d="M14 52 L60 8 L106 52 Z" fill="#e88a5a" stroke="#c96f43" stroke-width="2.5"/>
+          <path d="M14 52 L60 8 L106 52 Z" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="1.5" transform="translate(0,-3)"/>
+          <!-- 墙体 -->
+          <rect x="18" y="50" width="84" height="42" rx="4" fill="#fbeccf" stroke="#e0b98a" stroke-width="2"/>
+          <!-- 门 -->
+          <rect x="50" y="62" width="20" height="30" rx="3" fill="#b57a4a" stroke="#8f5a30" stroke-width="1.5"/>
+          <circle cx="66" cy="76" r="2" fill="#fff"/>
+          <!-- 左窗 -->
+          <rect x="26" y="60" width="16" height="14" rx="3" fill="#cdeef7" stroke="#9ac8da" stroke-width="1.5"/>
+          <line x1="34" y1="60" x2="34" y2="74" stroke="#9ac8da" stroke-width="1"/>
+          <!-- 右窗 -->
+          <rect x="78" y="60" width="16" height="14" rx="3" fill="#cdeef7" stroke="#9ac8da" stroke-width="1.5"/>
+          <line x1="86" y1="60" x2="86" y2="74" stroke="#9ac8da" stroke-width="1"/>
+          <!-- 烟囱 -->
+          <rect x="86" y="14" width="14" height="26" rx="2" fill="#c96f43" stroke="#a85a30" stroke-width="1.5"/>
+          <ellipse cx="93" cy="8" rx="7" ry="5" fill="rgba(255,255,255,0.5)"/>
+        </svg>
+        <span class="house-label">我的家</span>
+      </div>
+    </div>
+
+    <div class="level-info" id="levelInfo">小绿龟 · 再长大 <b id="expNext">60</b> 秒就升级</div>
+
+    <!-- 状态 -->
+    <div class="panel">
+      <div class="bar-row">
+        <span class="bar-label">饱食</span>
+        <div class="bar-track"><div class="bar-fill fill-hungry" id="barHungry" style="width:80%"></div></div>
+      </div>
+      <div class="bar-row">
+        <span class="bar-label">心情</span>
+        <div class="bar-track"><div class="bar-fill fill-mood" id="barMood" style="width:80%"></div></div>
+      </div>
+      <div class="bar-row">
+        <span class="bar-label">清洁</span>
+        <div class="bar-track"><div class="bar-fill fill-clean" id="barClean" style="width:80%"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 侧边栏：所有功能小按钮 -->
+  <div class="sidebar" id="sidebar">
+    <button class="sidebar-toggle" onclick="toggleSidebar()" title="收起/展开功能栏">
+      <span class="toggle-open">‹</span><span class="toggle-closed">›</span>
+    </button>
+    <div class="sidebar-body">
+    <div class="sidebar-group">
+      <button class="sbtn sbtn-feed"  onclick="feed()" title="喂食"><span class="emoji">🍎</span><span class="sbtn-txt">喂食</span></button>
+      <button class="sbtn sbtn-play"  onclick="play()" title="玩耍"><span class="emoji">🎾</span><span class="sbtn-txt">玩耍</span></button>
+      <button class="sbtn sbtn-clean" onclick="clean()" title="换水"><span class="emoji">💧</span><span class="sbtn-txt">换水</span></button>
+      <button class="sbtn sbtn-boost" onclick="boost()" title="加速成长"><span class="emoji">⏳</span><span class="sbtn-txt">加速</span></button>
+    </div>
+    <div class="sidebar-divider"></div>
+    <div class="sidebar-group">
+      <button class="sbtn" onclick="startGame()" title="闯关"><span class="emoji">🎮</span><span class="sbtn-txt">闯关</span></button>
+      <button class="sbtn" onclick="startAdventure()" title="冒险"><span class="emoji">🏃</span><span class="sbtn-txt">冒险</span></button>
+      <button class="sbtn" onclick="openPlaza()" title="广场"><span class="emoji">👥</span><span class="sbtn-txt">广场</span></button>
+      <button class="sbtn" onclick="openWardrobe()" title="装扮"><span class="emoji">👕</span><span class="sbtn-txt">装扮</span></button>
+      <button class="sbtn" onclick="openDecor()" title="布置"><span class="emoji">🏠</span><span class="sbtn-txt">布置</span></button>
+      <button class="sbtn sbtn-mail" onclick="openMail()" title="邮箱"><span class="emoji">✉️</span><span class="sbtn-txt">邮箱</span></button>
+    </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 闯关模式覆盖层 ===== -->
+<div class="game-overlay" id="gameOverlay">
+  <div class="game-hud">
+    <span>第 <b id="hudLevel">1</b> 关</span>
+    <span>⏱ <b id="hudTime">10</b>s</span>
+    <span>命中 <b id="hudHit">0</b>/<b id="hudGoal">5</b></span>
+    <button class="quit" onclick="quitGame()">退出</button>
+  </div>
+  <div class="game-arena" id="arena">
+    <div class="countdown" id="countdown" style="display:none">3</div>
+  </div>
+</div>
+
+<!-- ===== 冒险模式 ===== -->
+<div class="adv-overlay" id="advOverlay">
+  <div class="adv-hud">
+    <span>🪙 <b id="advCoin">0</b></span>
+    <span>❤️ <b id="advLife">3</b></span>
+    <span>进度 <b id="advProg">0%</b></span>
+    <button onclick="quitAdventure()">返回池塘</button>
+  </div>
+  <div class="adv-canvas-wrap">
+    <canvas id="advCanvas" width="960" height="540"></canvas>
+    <div class="adv-touch">
+      <div class="pad">
+        <div class="tbtn2" id="advLeft">◀</div>
+        <div class="tbtn2" id="advRight">▶</div>
+      </div>
+      <div class="pad">
+        <div class="tbtn2" id="advJump">⤒</div>
+      </div>
+    </div>
+  </div>
+  <div class="adv-modal" id="advStartModal">
+    <h2>乌龟大冒险</h2>
+    <p>← → 移动 · 空格/↑ 跳跃<br>踩扁小怪 +5 金币，别掉坑，冲到红旗！</p>
+    <button onclick="beginAdventure()">出发</button>
+  </div>
+  <div class="adv-modal hidden" id="advEndModal">
+    <h2 id="advEndTitle">通关啦！</h2>
+    <p id="advEndText"></p>
+    <button onclick="retryAdventure()">再来一次</button>
+  </div>
+</div>
+
+<!-- ===== 装扮商店 ===== -->
+<div class="shop-overlay" id="wardrobeOverlay">
+  <div class="shop-card">
+    <h2>装扮小屋</h2>
+    <div class="sub">给你的小乌龟穿点好看的</div>
+    <div class="shop-tabs" id="wardrobeTabs"></div>
+    <div class="shop-grid" id="wardrobeGrid"></div>
+    <button class="shop-close" onclick="closeShop('wardrobeOverlay')">关闭</button>
+  </div>
+</div>
+
+<!-- ===== 海缸布置 ===== -->
+<div class="shop-overlay" id="decorOverlay">
+  <div class="shop-card">
+    <h2>海缸布置</h2>
+    <div class="sub">买装饰品放到池塘里，立即生效</div>
+    <div class="shop-grid" id="decorGrid"></div>
+    <button class="shop-close" onclick="closeShop('decorOverlay')">关闭</button>
+  </div>
+</div>
+
+<!-- ===== 乌龟广场 ===== -->
+<div class="plaza-overlay" id="plazaOverlay">
+  <div class="plaza-header">
+    <h2>🐢 乌龟广场</h2>
+    <button onclick="closePlaza()">返回池塘</button>
+  </div>
+  <div class="plaza-grid" id="plazaGrid"></div>
+  <div class="plaza-tip" id="plazaTip">
+    正在加载邻居们的乌龟...
+  </div>
+</div>
+
+<!-- ===== 拜访别人家覆盖层 ===== -->
+<div class="visit-overlay hidden" id="visitOverlay">
+  <div class="visit-scene">
+    <div class="visit-top">
+      <span class="visit-title">🏠 <span id="visitName">邻居 的家</span></span>
+      <span class="visit-stat" id="visitLevel">Lv.1</span>
+      <span class="visit-stat" id="visitCoins">🪙0</span>
+    </div>
+    <div class="visit-home">
+      <div class="visit-house">
+        <svg viewBox="0 0 120 96" width="120" height="96">
+          <path d="M14 52 L60 8 L106 52 Z" fill="#e88a5a" stroke="#c96f43" stroke-width="2.5"/>
+          <rect x="18" y="50" width="84" height="42" rx="4" fill="#fbeccf" stroke="#e0b98a" stroke-width="2"/>
+          <rect x="50" y="62" width="20" height="30" rx="3" fill="#b57a4a" stroke="#8f5a30" stroke-width="1.5"/>
+          <rect x="26" y="60" width="16" height="14" rx="3" fill="#cdeef7" stroke="#9ac8da" stroke-width="1.5"/>
+          <rect x="78" y="60" width="16" height="14" rx="3" fill="#cdeef7" stroke="#9ac8da" stroke-width="1.5"/>
+          <rect x="86" y="14" width="14" height="26" rx="2" fill="#c96f43" stroke="#a85a30" stroke-width="1.5"/>
+        </svg>
+      </div>
+      <div class="visit-avatar" id="visitShell"></div>
+      <div class="visit-grass"></div>
+    </div>
+    <div class="visit-actions">
+      <button class="visit-btn" onclick="alert('留言功能即将上线 ✉️')">✉️ 留言</button>
+      <button class="visit-btn secondary" onclick="closeVisit()">🏠 返回我家</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 邮箱覆盖层 ===== -->
+<div class="mail-overlay" id="mailOverlay">
+  <div class="mail-card">
+    <div class="mail-header">
+      <h2>✉️ 我的邮箱</h2>
+      <button onclick="closeMail()">关闭</button>
+    </div>
+    <div class="mail-list" id="mailList">
+      <div class="mail-empty">暂无留言 ✉️</div>
+    </div>
+    <div class="mail-tip">别人在你的乌龟家留言，会显示在这里</div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<div id="offlineRoot"></div>
+
+<script>
+// ===== 游戏状态 =====
+const DEFAULT_STATE = {
+  coins: 20,
+  level: 1,
+  age: 0,
+  expInLevel: 0,
+  hungry: 80,
+  mood: 80,
+  clean: 80,
+  lastTick: Date.now(),
+  name: "小乌龟",
+  wardrobe: { hat: "none", glasses: "none", outfit: "none", shoes: "none" },
+  owned: { hats: ["none"], glasses: ["none"], outfits: ["none"], shoes: ["none"], decor: [] }
+};
+let state = load();
+
+// 等级配置：每级需要的秒数，乌龟外观
+const LEVELS = [
+  { minAge: 0,   name: "小绿龟", scale: 1.0,  shellColor: "#6bbf8a", shellDark: "#4a9e6b", headColor: "#7ccb92", next: 30 },
+  { minAge: 30,  name: "青壳龟", scale: 1.1,  shellColor: "#5fa87a", shellDark: "#3d8a5e", headColor: "#6ab57e", next: 90 },
+  { minAge: 120, name: "金甲龟", scale: 1.2,  shellColor: "#d4a84a", shellDark: "#b08830", headColor: "#e0bb60", next: 300 },
+  { minAge: 420, name: "灵龟",   scale: 1.35, shellColor: "#7e6bd4", shellDark: "#5c4ba8", headColor: "#9582e0", next: 900 },
+  { minAge: 1320,name: "神龟",   scale: 1.5,  shellColor: "#e86ba0", shellDark: "#c44a82", headColor: "#f08ab5", next: null }
+];
+
+// ===== 存档 =====
+function load() {
+  try {
+    const raw = localStorage.getItem("turtlePet");
+    if (!raw) return { ...DEFAULT_STATE };
+    const s = JSON.parse(raw);
+    return { ...DEFAULT_STATE, ...s };
+  } catch(e) { return { ...DEFAULT_STATE }; }
+}
+function save() {
+  state.lastTick = Date.now();
+  localStorage.setItem("turtlePet", JSON.stringify(state));
+}
+
+// ===== 离线结算 =====
+function settleOffline() {
+  const now = Date.now();
+  const dt = Math.floor((now - (state.lastTick || now)) / 1000);
+  if (dt < 5) return;
+
+  // 离线最多累计 8 小时
+  const capped = Math.min(dt, 8 * 3600);
+  // 离线金币收益 = 每秒 base * 状态系数 * 秒数
+  const rate = getCoinRate();
+  const earned = Math.floor(capped * rate * 0.5); // 离线收益打五折
+  state.coins += earned;
+
+  // 状态自然消耗
+  state.hungry = clamp(state.hungry - capped * 0.05, 0, 100);
+  state.mood   = clamp(state.mood   - capped * 0.04, 0, 100);
+  state.clean  = clamp(state.clean  - capped * 0.03, 0, 100);
+  state.age += capped;
+  state.expInLevel += capped;
+
+  // 升级
+  checkLevelUp();
+
+  if (earned > 0) {
+    showOfflineModal(formatTime(capped), earned);
+  }
+  save();
+}
+
+// ===== 工具 =====
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+function formatTime(sec) {
+  if (sec < 60) return sec + "秒";
+  if (sec < 3600) return Math.floor(sec/60) + "分钟";
+  return Math.floor(sec/3600) + "小时" + Math.floor((sec%3600)/60) + "分";
+}
+function getCoinRate() {
+  // 基础 0.5/秒 + 等级加成 + 状态加成
+  const levelBonus = (state.level - 1) * 0.2;
+  const avg = (state.hungry + state.mood + state.clean) / 3 / 100;
+  return (0.5 + levelBonus) * (0.5 + avg);
+}
+
+// ===== 升级 =====
+function getCurrentLevelIdx() {
+  let idx = 0;
+  for (let i = 0; i < LEVELS.length; i++) {
+    if (state.age >= LEVELS[i].minAge) idx = i;
+  }
+  return idx;
+}
+function checkLevelUp() {
+  const curIdx = getCurrentLevelIdx();
+  if (curIdx + 1 !== state.level) {
+    const old = state.level;
+    state.level = curIdx + 1;
+    const cfg = LEVELS[curIdx];
+    toast(`升级啦！${cfg.name} 出现了！`);
+    sfxLevel();
+    applyTurtleSkin();
+  }
+}
+
+// ===== 动作 =====
+function spend(cost) {
+  if (state.coins < cost) { toast("金币不够啦，再等等~"); return false; }
+  state.coins -= cost;
+  return true;
+}
+function feed() {
+  if (!spend(5)) return;
+  state.hungry = clamp(state.hungry + 25, 0, 100);
+  spawnHeart("🍎");
+  sfxFeed();
+  save(); render();
+}
+function play() {
+  if (!spend(8)) return;
+  state.mood = clamp(state.mood + 30, 0, 100);
+  spawnHeart("💕");
+  save(); render();
+}
+function clean() {
+  if (!spend(6)) return;
+  state.clean = clamp(state.clean + 30, 0, 100);
+  spawnHeart("💧");
+  save(); render();
+}
+function boost() {
+  if (!spend(20)) return;
+  const gain = 25;
+  state.age += gain;
+  state.expInLevel += gain;
+  checkLevelUp();
+  spawnHeart("✨");
+  sfxBoost();
+  toast(`时间飞逝！乌龟长大了 ${gain} 秒`);
+  save(); render();
+}
+
+// ===== 闯关模式 =====
+const ROUND_CONFIG = [
+  { goal: 5,  duration: 1200, reward: 20 },
+  { goal: 7,  duration: 1000, reward: 30 },
+  { goal: 9,  duration: 850,  reward: 50 },
+  { goal: 11, duration: 700,  reward: 80 },
+  { goal: 13, duration: 600,  reward: 120 },
+];
+const game = {
+  level: 1, hit: 0, timeLeft: 10,
+  playing: false, timers: [], spawnTimer: null
+};
+
+function getCfg(lv) {
+  return ROUND_CONFIG[Math.min(lv - 1, ROUND_CONFIG.length - 1)];
+}
+
+function startGame() {
+  game.level = 1;
+  document.getElementById("gameOverlay").classList.add("active");
+  countDownThenPlay();
+}
+
+function countDownThenPlay() {
+  const cd = document.getElementById("countdown");
+  cd.style.display = "flex";
+  let n = 3;
+  cd.textContent = n;
+  const t = setInterval(() => {
+    n--;
+    if (n <= 0) {
+      clearInterval(t);
+      cd.style.display = "none";
+      playRound();
+    } else {
+      cd.textContent = n;
+    }
+  }, 700);
+}
+
+function playRound() {
+  const cfg = getCfg(game.level);
+  game.hit = 0;
+  game.timeLeft = 10;
+  game.playing = true;
+  updateHUD();
+
+  // 清空场上残留
+  document.querySelectorAll(".mole").forEach(m => m.remove());
+
+  // 倒计时
+  game.timers.push(setInterval(() => {
+    game.timeLeft--;
+    updateHUD();
+    if (game.timeLeft <= 0) endRound();
+  }, 1000));
+
+  // 持续冒乌龟
+  scheduleSpawn();
+}
+
+function scheduleSpawn() {
+  if (!game.playing) return;
+  const cfg = getCfg(game.level);
+  game.spawnTimer = setTimeout(() => {
+    spawnMole(cfg.duration);
+    scheduleSpawn();
+  }, 500 + Math.random() * 400);
+}
+
+function spawnMole(duration) {
+  const arena = document.getElementById("arena");
+  const rect = arena.getBoundingClientRect();
+  const mole = document.createElement("div");
+  mole.className = "mole";
+  mole.innerHTML = `
+    <svg viewBox="0 0 80 60">
+      <ellipse cx="40" cy="38" rx="28" ry="20" fill="#6bbf8a"/>
+      <circle cx="66" cy="32" r="10" fill="#7ccb92"/>
+      <circle cx="69" cy="30" r="2" fill="#2c3e50"/>
+      <ellipse cx="22" cy="52" rx="6" ry="4" fill="#5a9e6e"/>
+      <ellipse cx="50" cy="52" rx="6" ry="4" fill="#5a9e6e"/>
+    </svg>`;
+  // 随机位置（底部 80% 区域）
+  const x = Math.random() * (rect.width - 70);
+  const y = rect.height * 0.35 + Math.random() * (rect.height * 0.55 - 50);
+  mole.style.left = x + "px";
+  mole.style.top = y + "px";
+  mole.addEventListener("pointerdown", (e) => {
+    e.stopPropagation();
+    hitMole(mole, x, y);
+  });
+  arena.appendChild(mole);
+  // 冒上来
+  requestAnimationFrame(() => mole.classList.add("up"));
+  // 时间到缩回去
+  setTimeout(() => {
+    mole.classList.remove("up");
+    setTimeout(() => mole.remove(), 200);
+  }, duration);
+}
+
+function hitMole(mole, x, y) {
+  if (!game.playing) return;
+  game.hit++;
+  const reward = 10;
+  state.coins += reward;
+  sfxCoin();
+
+  // 飘字
+  const arena = document.getElementById("arena");
+  const pop = document.createElement("div");
+  pop.className = "score-pop";
+  pop.textContent = "+" + reward;
+  pop.style.left = x + 20 + "px";
+  pop.style.top  = y + "px";
+  arena.appendChild(pop);
+  setTimeout(() => pop.remove(), 800);
+
+  mole.classList.remove("up");
+  setTimeout(() => mole.remove(), 200);
+
+  updateHUD();
+  save();
+
+  const cfg = getCfg(game.level);
+  if (game.hit >= cfg.goal) endRound(true);
+}
+
+function updateHUD() {
+  document.getElementById("hudLevel").textContent = game.level;
+  document.getElementById("hudTime").textContent = game.timeLeft;
+  document.getElementById("hudHit").textContent = game.hit;
+  document.getElementById("hudGoal").textContent = getCfg(game.level).goal;
+}
+
+function endRound(passed) {
+  game.playing = false;
+  clearTimeout(game.spawnTimer);
+  game.timers.forEach(clearInterval);
+  game.timers = [];
+  document.querySelectorAll(".mole").forEach(m => m.remove());
+
+  const cfg = getCfg(game.level);
+  const passedNow = passed || (game.hit >= cfg.goal);
+  const bonus = passedNow ? cfg.reward : 0;
+  if (passedNow) state.coins += bonus;
+
+  const arena = document.getElementById("arena");
+  const div = document.createElement("div");
+  div.className = "game-result";
+  if (passedNow) {
+    div.innerHTML = `
+      <h2>过关！</h2>
+      <p>第 ${game.level} 关完成<br>奖励 <b style="color:#ffd700">+${bonus}</b> 金币</p>
+      <div class="btns">
+        <button class="btn-retry" onclick="nextRound()">下一关</button>
+        <button class="btn-exit" onclick="quitGame()">离开</button>
+      </div>`;
+  } else {
+    div.innerHTML = `
+      <h2>差一点点</h2>
+      <p>命中 ${game.hit}/${cfg.goal} 只<br>本次获得 <b style="color:#ffd700">+${game.hit * 10}</b> 金币</p>
+      <div class="btns">
+        <button class="btn-retry" onclick="retryRound()">再来一次</button>
+        <button class="btn-exit" onclick="quitGame()">离开</button>
+      </div>`;
+  }
+  arena.appendChild(div);
+  save(); render();
+}
+
+function nextRound() {
+  document.querySelector(".game-result")?.remove();
+  game.level++;
+  countDownThenPlay();
+}
+function retryRound() {
+  document.querySelector(".game-result")?.remove();
+  countDownThenPlay();
+}
+function quitGame() {
+  game.playing = false;
+  clearTimeout(game.spawnTimer);
+  game.timers.forEach(clearInterval);
+  game.timers = [];
+  document.querySelectorAll(".mole").forEach(m => m.remove());
+  document.querySelector(".game-result")?.remove();
+  document.getElementById("gameOverlay").classList.remove("active");
+  save(); render();
+}
+
+// ===== 冒险模式（横版跳跃） =====
+const advCanvas = document.getElementById("advCanvas");
+const advCtx = advCanvas.getContext("2d");
+const AWW = advCanvas.width, AHH = advCanvas.height;
+
+const advKeys = { left: false, right: false, jump: false };
+const advKeyMap = {
+  ArrowLeft: "left", a: "left", A: "left",
+  ArrowRight: "right", d: "right", D: "right",
+  ArrowUp: "jump", w: "jump", W: "jump", " ": "jump"
+};
+let advHandlerInstalled = false;
+function installAdvInput() {
+  if (advHandlerInstalled) return;
+  advHandlerInstalled = true;
+  window.addEventListener("keydown", e => {
+    if (!document.getElementById("advOverlay").classList.contains("active")) return;
+    if (advKeyMap[e.key] !== undefined) { advKeys[advKeyMap[e.key]] = true; e.preventDefault(); }
+  });
+  window.addEventListener("keyup", e => {
+    if (advKeyMap[e.key] !== undefined) advKeys[advKeyMap[e.key]] = false;
+  });
+}
+function bindAdvTouch(el, key) {
+  const on  = e => { e.preventDefault(); advKeys[key] = true; };
+  const off = e => { e.preventDefault(); advKeys[key] = false; };
+  el.addEventListener("pointerdown", on);
+  el.addEventListener("pointerup", off);
+  el.addEventListener("pointerleave", off);
+  el.addEventListener("pointercancel", off);
+}
+
+const ADV_GROUND_Y = 440;
+const ADV_LEVEL = {
+  width: 4800,
+  solids: [
+    { x: -100, y: ADV_GROUND_Y, w: 950, h: 200, type: "ground" },
+    { x: 1080, y: ADV_GROUND_Y, w: 600, h: 200, type: "ground" },
+    { x: 1830, y: ADV_GROUND_Y, w: 700, h: 200, type: "ground" },
+    { x: 2680, y: ADV_GROUND_Y, w: 600, h: 200, type: "ground" },
+    { x: 3430, y: ADV_GROUND_Y, w: 1500, h: 200, type: "ground" },
+    { x: 350,  y: 340, w: 80,  h: 20, type: "brick" },
+    { x: 500,  y: 280, w: 80,  h: 20, type: "brick" },
+    { x: 700,  y: 340, w: 80,  h: 20, type: "brick" },
+    { x: 1180, y: 320, w: 100, h: 20, type: "brick" },
+    { x: 1380, y: 260, w: 100, h: 20, type: "brick" },
+    { x: 1630, y: 320, w: 120, h: 20, type: "brick" },
+    { x: 1980, y: 300, w: 80,  h: 20, type: "brick" },
+    { x: 2130, y: 240, w: 80,  h: 20, type: "brick" },
+    { x: 2280, y: 300, w: 80,  h: 20, type: "brick" },
+    { x: 2780, y: 320, w: 100, h: 20, type: "brick" },
+    { x: 2980, y: 260, w: 100, h: 20, type: "brick" },
+    { x: 3180, y: 320, w: 100, h: 20, type: "brick" },
+    { x: 3630, y: 300, w: 100, h: 20, type: "brick" },
+    { x: 3830, y: 240, w: 100, h: 20, type: "brick" },
+  ],
+  pipes: [
+    { x: 1280, y: 380, w: 60, h: 60 },
+    { x: 2880, y: 360, w: 70, h: 80 },
+  ],
+  coins: [
+    [400, 310], [550, 250], [750, 310],
+    [1230, 290], [1430, 230], [1680, 290],
+    [2030, 270], [2180, 210], [2330, 270],
+    [2830, 290], [3030, 230], [3230, 290],
+    [3680, 270], [3880, 210],
+    [950, 400], [1750, 400], [2550, 400], [3330, 400],
+  ],
+  enemies: [
+    { x: 800,  y: ADV_GROUND_Y, range: 200 },
+    { x: 1350, y: ADV_GROUND_Y, range: 150 },
+    { x: 2050, y: ADV_GROUND_Y, range: 200 },
+    { x: 2950, y: ADV_GROUND_Y, range: 150 },
+    { x: 3750, y: ADV_GROUND_Y, range: 200 },
+  ],
+  flagX: 4580,
+  spawnX: 80
+};
+
+let advP, advEn, advCn, advCam, advLives, advCoins, advState, advParts, advRAF;
+
+function advReset() {
+  advP = { x: ADV_LEVEL.spawnX, y: ADV_GROUND_Y - 40, w: 36, h: 40, vx: 0, vy: 0, onGround: false, facing: 1, invincible: 0 };
+  advEn = ADV_LEVEL.enemies.map(e => ({ x: e.x, y: e.y - 28, w: 32, h: 28, vx: 0.8, dir: 1, startX: e.x, range: e.range, alive: true, squash: 0 }));
+  advCn = ADV_LEVEL.coins.map(c => ({ x: c[0], y: c[1], taken: false }));
+  advCam = { x: 0 };
+  advLives = 3;
+  advCoins = 0;
+  advParts = [];
+  advState = "ready";
+  advUpdateHUD();
+}
+function advUpdateHUD() {
+  document.getElementById("advCoin").textContent = advCoins;
+  document.getElementById("advLife").textContent = advLives;
+  const prog = Math.min(100, Math.floor((advP.x - ADV_LEVEL.spawnX) / (ADV_LEVEL.flagX - ADV_LEVEL.spawnX) * 100));
+  document.getElementById("advProg").textContent = prog + "%";
+}
+function advAABB(a, b) { return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y; }
+function advSolids() { return ADV_LEVEL.solids.concat(ADV_LEVEL.pipes); }
+
+function advUpdate() {
+  if (advState !== "playing") return;
+  if (advKeys.left)  { advP.vx -= 0.5; advP.facing = -1; }
+  if (advKeys.right) { advP.vx += 0.5; advP.facing = 1; }
+  advP.vx = Math.max(-5, Math.min(5, advP.vx));
+  // 只在地面摩擦，空中保持惯性
+  if (advP.onGround && !advKeys.left && !advKeys.right) advP.vx *= 0.8;
+  if (advKeys.jump && advP.onGround) { advP.vy = -12.5; advP.onGround = false; sfxJump(); }
+  advP.vy += 0.5;
+  if (advP.vy > 13) advP.vy = 13;
+
+  advP.x += advP.vx;
+  for (const s of advSolids()) {
+    if (advAABB(advP, s)) {
+      if (advP.vx > 0) advP.x = s.x - advP.w;
+      else if (advP.vx < 0) advP.x = s.x + s.w;
+      advP.vx = 0;
+    }
+  }
+  if (advP.x < 0) advP.x = 0;
+
+  advP.y += advP.vy;
+  advP.onGround = false;
+  for (const s of advSolids()) {
+    if (advAABB(advP, s)) {
+      if (advP.vy > 0) { advP.y = s.y - advP.h; advP.vy = 0; advP.onGround = true; }
+      else if (advP.vy < 0) { advP.y = s.y + s.h; advP.vy = 0; }
+    }
+  }
+  if (advP.y > AHH + 100) { advLose(); return; }
+
+  for (const en of advEn) {
+    if (!en.alive) { if (en.squash > 0) en.squash--; continue; }
+    en.x += en.vx * en.dir;
+    if (en.x < en.startX - en.range || en.x > en.startX + en.range) en.dir *= -1;
+    if (advP.invincible > 0) { advP.invincible--; continue; }
+    if (advAABB(advP, en)) {
+      if (advP.vy > 0 && advP.y + advP.h - en.y < 18) {
+        en.alive = false; en.squash = 30;
+        advP.vy = -9;
+        advCoins += 5;
+        sfxStomp();
+        advParticles(en.x + en.w/2, en.y, "#7ccb92");
+      } else { advLose(); return; }
+    }
+  }
+  for (const c of advCn) {
+    if (c.taken) continue;
+    const dx = c.x - (advP.x + advP.w/2);
+    const dy = c.y - (advP.y + advP.h/2);
+    if (dx*dx + dy*dy < 30*30) {
+      c.taken = true; advCoins++;
+      sfxCoin();
+      advParticles(c.x, c.y, "#ffd700");
+    }
+  }
+  if (advP.x > ADV_LEVEL.flagX) { advWin(); return; }
+  for (const p of advParts) { p.x += p.vx; p.y += p.vy; p.vy += 0.2; p.life--; }
+  advParts = advParts.filter(p => p.life > 0);
+
+  const targetCam = advP.x - AWW/2;
+  advCam.x += (targetCam - advCam.x) * 0.1;
+  advCam.x = Math.max(0, Math.min(ADV_LEVEL.width - AWW, advCam.x));
+  advUpdateHUD();
+}
+function advParticles(x, y, color) {
+  for (let i = 0; i < 8; i++) {
+    advParts.push({ x, y, vx: (Math.random()-0.5)*4, vy: (Math.random()-0.5)*4 - 2, life: 30, color });
+  }
+}
+function advLose() {
+  advLives--;
+  if (advLives <= 0) {
+    advState = "over";
+    document.getElementById("advEndTitle").textContent = "游戏结束";
+    document.getElementById("advEndText").innerHTML = `收集金币: <b style="color:#ffd700">${advCoins}</b>`;
+    document.getElementById("advEndModal").classList.remove("hidden");
+  } else {
+    advP.x = ADV_LEVEL.spawnX;
+    advP.y = ADV_GROUND_Y - 40;
+    advP.vx = 0; advP.vy = 0;
+    advP.invincible = 90;
+  }
+  advUpdateHUD();
+}
+function advWin() {
+  advState = "win";
+  document.getElementById("advEndTitle").textContent = "通关啦！";
+  document.getElementById("advEndText").innerHTML = `收集金币: <b style="color:#ffd700">${advCoins}</b> · 剩余生命: <b style="color:#ff8fb3">${advLives}</b>`;
+  document.getElementById("advEndModal").classList.remove("hidden");
+}
+
+function advDrawTurtle(x, y, facing, inv) {
+  advCtx.save();
+  advCtx.translate(x + 18, y + 20);
+  advCtx.scale(facing, 1);
+  if (inv > 0 && Math.floor(inv/5) % 2 === 0) advCtx.globalAlpha = 0.4;
+  advCtx.fillStyle = "#5a9e6e";
+  advCtx.beginPath(); advCtx.ellipse(-8, 16, 6, 4, 0, 0, Math.PI*2); advCtx.fill();
+  advCtx.beginPath(); advCtx.ellipse(10, 16, 6, 4, 0, 0, Math.PI*2); advCtx.fill();
+  advCtx.fillStyle = "#6bbf8a";
+  advCtx.beginPath(); advCtx.ellipse(0, 0, 18, 14, 0, 0, Math.PI*2); advCtx.fill();
+  advCtx.strokeStyle = "#4a9e6b"; advCtx.lineWidth = 1.5;
+  advCtx.beginPath(); advCtx.ellipse(0, 0, 12, 9, 0, 0, Math.PI*2); advCtx.stroke();
+  advCtx.fillStyle = "#7ccb92";
+  advCtx.beginPath(); advCtx.arc(18, -4, 9, 0, Math.PI*2); advCtx.fill();
+  advCtx.fillStyle = "#2c3e50";
+  advCtx.beginPath(); advCtx.arc(22, -6, 1.8, 0, Math.PI*2); advCtx.fill();
+  advCtx.restore();
+}
+function advDrawEnemy(en) {
+  advCtx.save();
+  advCtx.translate(en.x + en.w/2, en.y + en.h/2);
+  if (!en.alive) {
+    advCtx.scale(1, 0.3);
+    advCtx.fillStyle = "#8a5a3a";
+    advCtx.beginPath(); advCtx.ellipse(0, 0, 16, 10, 0, 0, Math.PI*2); advCtx.fill();
+  } else {
+    advCtx.fillStyle = "#8a5a3a";
+    advCtx.beginPath(); advCtx.ellipse(0, 0, 14, 12, 0, 0, Math.PI*2); advCtx.fill();
+    advCtx.fillStyle = "#5a3a24";
+    const legOff = Math.sin(Date.now()/100 + en.x) * 2;
+    advCtx.beginPath(); advCtx.ellipse(-6, 10 + legOff, 3, 3, 0, 0, Math.PI*2); advCtx.fill();
+    advCtx.beginPath(); advCtx.ellipse(6, 10 - legOff, 3, 3, 0, 0, Math.PI*2); advCtx.fill();
+    advCtx.fillStyle = "white";
+    advCtx.beginPath(); advCtx.arc(-4, -3, 3, 0, Math.PI*2); advCtx.fill();
+    advCtx.beginPath(); advCtx.arc(4, -3, 3, 0, Math.PI*2); advCtx.fill();
+    advCtx.fillStyle = "#2c3e50";
+    advCtx.beginPath(); advCtx.arc(-4, -3, 1.5, 0, Math.PI*2); advCtx.fill();
+    advCtx.beginPath(); advCtx.arc(4, -3, 1.5, 0, Math.PI*2); advCtx.fill();
+  }
+  advCtx.restore();
+}
+function advDrawCoin(c, t) {
+  if (c.taken) return;
+  advCtx.save();
+  advCtx.translate(c.x, c.y + Math.sin(t/200 + c.x)*2);
+  const squash = Math.abs(Math.sin(t/300 + c.x));
+  advCtx.scale(squash, 1);
+  advCtx.fillStyle = "#ffd700";
+  advCtx.strokeStyle = "#d4a017"; advCtx.lineWidth = 2;
+  advCtx.beginPath(); advCtx.arc(0, 0, 9, 0, Math.PI*2); advCtx.fill(); advCtx.stroke();
+  advCtx.restore();
+}
+function advDraw(t) {
+  const grad = advCtx.createLinearGradient(0, 0, 0, AHH);
+  grad.addColorStop(0, "#87ceeb");
+  grad.addColorStop(1, "#c9e9f5");
+  advCtx.fillStyle = grad;
+  advCtx.fillRect(0, 0, AWW, AHH);
+  advCtx.fillStyle = "rgba(255,255,255,0.8)";
+  for (let i = 0; i < 5; i++) {
+    const cx = ((i*400 - advCam.x*0.3) % (AWW+200) + AWW+200) % (AWW+200) - 100;
+    const cy = 50 + (i%3)*35;
+    advCtx.beginPath();
+    advCtx.arc(cx, cy, 18, 0, Math.PI*2);
+    advCtx.arc(cx+22, cy-5, 22, 0, Math.PI*2);
+    advCtx.arc(cx+44, cy, 18, 0, Math.PI*2);
+    advCtx.fill();
+  }
+  advCtx.save();
+  advCtx.translate(-advCam.x, 0);
+  for (const s of ADV_LEVEL.solids) {
+    if (s.x + s.w < advCam.x - 50 || s.x > advCam.x + AWW + 50) continue;
+    if (s.type === "ground") {
+      advCtx.fillStyle = "#7cc47a";
+      advCtx.fillRect(s.x, s.y, s.w, 12);
+      advCtx.fillStyle = "#a0754f";
+      advCtx.fillRect(s.x, s.y + 12, s.w, s.h - 12);
+    } else {
+      advCtx.fillStyle = "#e8924a";
+      advCtx.fillRect(s.x, s.y, s.w, s.h);
+      advCtx.strokeStyle = "#b86830"; advCtx.lineWidth = 2;
+      advCtx.strokeRect(s.x, s.y, s.w, s.h);
+    }
+  }
+  for (const p of ADV_LEVEL.pipes) {
+    advCtx.fillStyle = "#3cb371";
+    advCtx.fillRect(p.x, p.y, p.w, p.h);
+    advCtx.fillStyle = "#2d8a55";
+    advCtx.fillRect(p.x, p.y, p.w, 8);
+  }
+  const fx = ADV_LEVEL.flagX;
+  advCtx.strokeStyle = "#888"; advCtx.lineWidth = 6;
+  advCtx.beginPath(); advCtx.moveTo(fx, ADV_GROUND_Y - 180); advCtx.lineTo(fx, ADV_GROUND_Y); advCtx.stroke();
+  advCtx.fillStyle = "#ff5c5c";
+  advCtx.beginPath();
+  advCtx.moveTo(fx, ADV_GROUND_Y - 180);
+  advCtx.lineTo(fx - 50, ADV_GROUND_Y - 165);
+  advCtx.lineTo(fx, ADV_GROUND_Y - 150);
+  advCtx.closePath(); advCtx.fill();
+  advCtx.fillStyle = "#888";
+  advCtx.fillRect(fx - 15, ADV_GROUND_Y - 10, 30, 10);
+  for (const c of advCn) advDrawCoin(c, t);
+  for (const en of advEn) advDrawEnemy(en);
+  advDrawTurtle(advP.x, advP.y, advP.facing, advP.invincible);
+  for (const p of advParts) {
+    advCtx.globalAlpha = p.life / 30;
+    advCtx.fillStyle = p.color;
+    advCtx.fillRect(p.x - 2, p.y - 2, 4, 4);
+  }
+  advCtx.globalAlpha = 1;
+  advCtx.restore();
+}
+function advLoop(t) {
+  advUpdate();
+  advDraw(t || 0);
+  if (document.getElementById("advOverlay").classList.contains("active")) {
+    advRAF = requestAnimationFrame(advLoop);
+  }
+}
+function startAdventure() {
+  installAdvInput();
+  bindAdvTouch(document.getElementById("advLeft"), "left");
+  bindAdvTouch(document.getElementById("advRight"), "right");
+  bindAdvTouch(document.getElementById("advJump"), "jump");
+  document.getElementById("advOverlay").classList.add("active");
+  document.getElementById("advStartModal").classList.remove("hidden");
+  document.getElementById("advEndModal").classList.add("hidden");
+  advReset();
+}
+function beginAdventure() {
+  document.getElementById("advStartModal").classList.add("hidden");
+  advState = "playing";
+  cancelAnimationFrame(advRAF);
+  advRAF = requestAnimationFrame(advLoop);
+}
+function retryAdventure() {
+  document.getElementById("advEndModal").classList.add("hidden");
+  advReset();
+  advState = "playing";
+}
+function quitAdventure() {
+  advState = "stopped";
+  cancelAnimationFrame(advRAF);
+  advKeys.left = advKeys.right = advKeys.jump = false;
+  document.getElementById("advOverlay").classList.remove("active");
+  save(); render();
+}
+
+// ===== 装扮商店 =====
+const HATS = [
+  { id: "none",  name: "不戴", price: 0 },
+  { id: "straw", name: "草帽", price: 50 },
+  { id: "crown", name: "皇冠", price: 200 },
+  { id: "grad",  name: "学士帽", price: 500 },
+  { id: "party", name: "派对帽", price: 100 },
+];
+const GLASSES = [
+  { id: "none",    name: "不戴", price: 0 },
+  { id: "sunglass",name: "墨镜", price: 80 },
+  { id: "round",   name: "圆眼镜", price: 120 },
+];
+const OUTFITS = [
+  { id: "none",   name: "光溜溜", price: 0 },
+  { id: "scarf",  name: "红围巾", price: 100 },
+  { id: "backpack",name: "小书包", price: 150 },
+];
+const SHOES = [
+  { id: "none",  name: "光脚", price: 0 },
+  { id: "red",   name: "小红鞋", price: 60 },
+  { id: "sport", name: "运动鞋", price: 180 },
+];
+const DECORS = [
+  { id: "castle", name: "小城堡", price: 100 },
+  { id: "shell",  name: "大贝壳", price: 30 },
+  { id: "coral",  name: "红珊瑚", price: 50 },
+  { id: "rock",   name: "圆石头", price: 20 },
+  { id: "flag",   name: "小旗子", price: 80 },
+];
+
+let wardrobeTab = "hats";
+
+// 进入小屋（家的室内，本阶段先占位提示）
+function openHouse() {
+  alert("小屋正在建设中 🏗️\n（下一阶段会开放室内装修、家具摆放和好友留宿哦）");
+}
+
+// 侧边栏收起/展开
+function toggleSidebar() {
+  document.getElementById("sidebar").classList.toggle("closed");
+}
+// 打开邮箱（接收留言）
+function openMail() {
+  document.getElementById("mailOverlay").classList.remove("hidden");
+  renderMail();
+}
+function closeMail() {
+  document.getElementById("mailOverlay").classList.add("hidden");
+}
+// 渲染留言（数据存 localStorage，社交系统后续写入真实留言）
+function getMails() {
+  try { return JSON.parse(localStorage.getItem("turtlePetMails") || "[]"); }
+  catch(e) { return []; }
+}
+function renderMail() {
+  const list = document.getElementById("mailList");
+  const mails = getMails();
+  if (!mails.length) {
+    list.innerHTML = '<div class="mail-empty">暂无留言 ✉️<br><span style="font-size:12px;color:#9ab8c9">（好友来你家留言后会显示在这里）</span></div>';
+    return;
+  }
+  list.innerHTML = mails.map(function(m) {
+    return '<div class="mail-item">' +
+      '<div class="from">' + (m.from || "邻居") + '</div>' +
+      '<div class="text">' + (m.text || "") + '</div>' +
+      '<div class="time">' + (m.time || "") + '</div>' +
+      '</div>';
+  }).join("");
+}
+
+
+function openWardrobe() {
+  document.getElementById("wardrobeOverlay").classList.add("active");
+  renderWardrobe();
+}
+function renderWardrobe() {
+  const tabs = [
+    ["hats", "帽子"], ["glasses", "眼镜"], ["outfits", "衣服"], ["shoes", "鞋子"]
+  ];
+  document.getElementById("wardrobeTabs").innerHTML = tabs.map(([k, label]) =>
+    `<button class="shop-tab ${wardrobeTab === k ? "active" : ""}" onclick="wardrobeTab='${k}';renderWardrobe()">${label}</button>`
+  ).join("");
+
+  const listMap = { hats: HATS, glasses: GLASSES, outfits: OUTFITS, shoes: SHOES };
+  const list = listMap[wardrobeTab];
+  const equipped = state.wardrobe[wardrobeTab];
+  const owned = state.owned[wardrobeTab];
+
+  document.getElementById("wardrobeGrid").innerHTML = list.map(item => {
+    const has = owned.includes(item.id);
+    const isEq = equipped === item.id;
+    return `<div class="shop-item ${isEq ? "equipped" : ""}" onclick="buyOrEquip('${wardrobeTab}','${item.id}',${item.price})">
+      <div class="preview">${previewIcon(wardrobeTab, item.id)}</div>
+      <div class="name">${item.name}</div>
+      <div class="${has ? "owned" : "price"}">${has ? (isEq ? "穿着中" : "已拥有") : item.price + " 金币"}</div>
+    </div>`;
+  }).join("");
+}
+function previewIcon(cat, id) {
+  if (cat === "hats") {
+    if (id === "straw") return "🌾";
+    if (id === "crown") return "👑";
+    if (id === "grad") return "🎓";
+    if (id === "party") return "🎉";
+    return "";
+  }
+  if (cat === "glasses") {
+    if (id === "sunglass") return "🕶";
+    if (id === "round") return "👓";
+    return "";
+  }
+  if (cat === "outfits") {
+    if (id === "scarf") return "🧣";
+    if (id === "backpack") return "🎒";
+    return "";
+  }
+  if (cat === "shoes") {
+    if (id === "red") return "👟";
+    if (id === "sport") return "🏃";
+    return "";
+  }
+  return "";
+}
+function buyOrEquip(cat, id, price) {
+  const owned = state.owned[cat];
+  if (owned.includes(id)) {
+    state.wardrobe[cat] = id;
+    toast("穿上啦！");
+  } else {
+    if (state.coins < price) { toast("金币不够，去闯关赚吧"); return; }
+    state.coins -= price;
+    owned.push(id);
+    state.wardrobe[cat] = id;
+    toast("购买成功，已穿上！");
+  }
+  save(); render(); renderWardrobe();
+}
+
+// ===== 海缸布置 =====
+function openDecor() {
+  document.getElementById("decorOverlay").classList.add("active");
+  renderDecor();
+}
+function renderDecor() {
+  document.getElementById("decorGrid").innerHTML = DECORS.map(item => {
+    const has = state.owned.decor.includes(item.id);
+    return `<div class="shop-item ${has ? "equipped" : ""}" onclick="buyDecor('${item.id}',${item.price})">
+      <div class="preview">${decorIcon(item.id)}</div>
+      <div class="name">${item.name}</div>
+      <div class="${has ? "owned" : "price"}">${has ? "已放置" : item.price + " 金币"}</div>
+    </div>`;
+  }).join("");
+}
+function decorIcon(id) {
+  return { castle: "🏰", shell: "🐚", coral: "🪸", rock: "🪨", flag: "🚩" }[id] || "";
+}
+function buyDecor(id, price) {
+  if (state.owned.decor.includes(id)) {
+    // 取消放置
+    state.owned.decor = state.owned.decor.filter(x => x !== id);
+    toast("已收起");
+  } else {
+    if (state.coins < price) { toast("金币不够"); return; }
+    state.coins -= price;
+    state.owned.decor.push(id);
+    toast("放好了！");
+  }
+  save(); render(); renderDecor(); renderPondDecor();
+}
+function closeShop(id) {
+  document.getElementById(id).classList.remove("active");
+}
+
+// ===== 在池塘里渲染装饰 =====
+function renderPondDecor() {
+  document.querySelectorAll(".pond-decor").forEach(e => e.remove());
+  const pond = document.getElementById("pond");
+  const positions = {
+    castle: { left: "80%", bottom: "20px" },
+    shell:   { left: "15%", bottom: "30px" },
+    coral:   { left: "60%", bottom: "15px" },
+    rock:    { left: "35%", bottom: "10px" },
+    flag:    { left: "90%", bottom: "50px" },
+  };
+  for (const id of state.owned.decor) {
+    const pos = positions[id];
+    if (!pos) continue;
+    const el = document.createElement("div");
+    el.className = "pond-decor";
+    el.style.cssText = `position:absolute;font-size:32px;left:${pos.left};bottom:${pos.bottom};`;
+    el.textContent = decorIcon(id);
+    pond.appendChild(el);
+  }
+}
+
+// ===== 乌龟广场（占位，待接后端） =====
+const MOCK_NEIGHBORS = [
+  { name: "王哥", id: "T-1001", level: 5, coins: 880, shell: "#e86ba0" },
+  { name: "李姐", id: "T-1002", level: 4, coins: 620, shell: "#7e6bd4" },
+  { name: "阿伟", id: "T-1003", level: 3, coins: 340, shell: "#d4a84a" },
+  { name: "小美", id: "T-1004", level: 6, coins: 1200, shell: "#6bbf8a" },
+  { name: "张三", id: "T-1005", level: 2, coins: 150, shell: "#5fa87a" },
+];
+function openPlaza() {
+  document.getElementById("plazaOverlay").classList.add("active");
+  renderPlaza();
+}
+function renderPlaza() {
+  const myCard = {
+    name: state.name || "我",
+    id: "T-" + (state.age | 0),
+    level: state.level,
+    coins: Math.floor(state.coins),
+    shell: LEVELS[getCurrentLevelIdx()].shellColor,
+    me: true
+  };
+  const all = [myCard, ...MOCK_NEIGHBORS].sort((a, b) => b.level - a.level);
+  document.getElementById("plazaGrid").innerHTML = all.map(t => `
+    <div class="turtle-card ${t.me ? "me" : ""}">
+      <div class="avatar">
+        <svg viewBox="0 0 80 60" width="60">
+          <ellipse cx="40" cy="38" rx="26" ry="18" fill="${t.shell}"/>
+          <circle cx="62" cy="32" r="9" fill="${t.shell}"/>
+          <circle cx="65" cy="30" r="1.5" fill="#222"/>
+        </svg>
+      </div>
+      <div class="tname">${t.name}${t.me ? "（我）" : ""}</div>
+      <div class="tid">${t.id}</div>
+      <div class="tstats">Lv.${t.level} · 🪙${t.coins}</div>
+    </div>
+  `).join("");
+  document.getElementById("plazaTip").textContent =
+    "接上后端后，这里会显示所有在线同学的真实乌龟，还能点别人的乌龟点赞！";
+}
+function closePlaza() {
+  document.getElementById("plazaOverlay").classList.remove("active");
+}
+
+// 点击乌龟
+document.getElementById("turtleWrap").addEventListener("click", () => {
+  state.mood = clamp(state.mood + 3, 0, 100);
+  spawnHeart("❤️");
+  // 随机眨眼动画
+  const eyes = document.getElementById("eyes");
+  eyes.style.transform = "scaleY(0.1)";
+  eyes.style.transformOrigin = "163px 80px";
+  setTimeout(() => { eyes.style.transform = "scaleY(1)"; }, 150);
+  save();
+});
+
+function spawnHeart(text) {
+  const pond = document.getElementById("pond");
+  const h = document.createElement("div");
+  h.className = "heart";
+  h.textContent = text;
+  h.style.left = (40 + Math.random()*20) + "%";
+  h.style.top  = (35 + Math.random()*10) + "%";
+  pond.appendChild(h);
+  setTimeout(() => h.remove(), 1000);
+}
+
+function toast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove("show"), 1800);
+}
+
+function showOfflineModal(timeStr, coins) {
+  const root = document.getElementById("offlineRoot");
+  root.innerHTML = `
+    <div class="offline-modal">
+      <div class="offline-card">
+        <h3>乌龟想你啦</h3>
+        <p>你离开 ${timeStr}<br>乌龟自己攒了 <b style="color:#ff8c42">${coins}</b> 金币</p>
+        <button onclick="this.closest('.offline-modal').remove()">收下</button>
+      </div>
+    </div>`;
+}
+
+// ===== 皮肤 =====
+function applyTurtleSkin() {
+  const cfg = LEVELS[getCurrentLevelIdx()];
+  document.getElementById("shellBody").setAttribute("fill", cfg.shellColor);
+  document.getElementById("turtleHead").setAttribute("fill", cfg.headColor);
+  document.getElementById("turtleWrap").style.animationDuration = (3 - cfg.scale * 0.4) + "s";
+  document.querySelector(".turtle-svg").style.width = (160 * cfg.scale) + "px";
+}
+
+// ===== 渲染 =====
+function render() {
+  document.getElementById("coins").textContent = Math.floor(state.coins);
+  document.getElementById("level").textContent = state.level;
+  document.getElementById("age").textContent = formatTime(state.age);
+  document.getElementById("barHungry").style.width = state.hungry + "%";
+  document.getElementById("barMood").style.width   = state.mood + "%";
+  document.getElementById("barClean").style.width  = state.clean + "%";
+
+  const cfg = LEVELS[getCurrentLevelIdx()];
+  const info = document.getElementById("levelInfo");
+  if (cfg.next) {
+    const left = cfg.next - (state.age - cfg.minAge);
+    info.innerHTML = `${cfg.name} · 再长大 <b>${Math.max(0, Math.ceil(left))}</b> 秒就升级`;
+  } else {
+    info.innerHTML = `${cfg.name} · 已是最高形态`;
+  }
+  renderPondDecor();
+  renderWardrobeOnTurtle();
+}
+
+function renderWardrobeOnTurtle() {
+  document.querySelectorAll(".turtle-decor").forEach(e => e.remove());
+  const wrap = document.getElementById("turtleWrap");
+  // 乌龟 SVG 宽 160px，头在右侧，身体中心约 (75, 70)，头在 (120, 55)
+  const pieces = [];
+  if (state.wardrobe.hat === "straw")  pieces.push({ icon: "🌾", top: "30px", left: "105px", size: "24px" });
+  if (state.wardrobe.hat === "crown")  pieces.push({ icon: "👑", top: "32px", left: "112px", size: "22px" });
+  if (state.wardrobe.hat === "grad")  pieces.push({ icon: "🎓", top: "30px", left: "100px", size: "24px" });
+  if (state.wardrobe.hat === "party")  pieces.push({ icon: "🎉", top: "30px", left: "115px", size: "22px" });
+  if (state.wardrobe.glasses === "sunglass") pieces.push({ icon: "🕶", top: "52px", left: "118px", size: "18px" });
+  if (state.wardrobe.glasses === "round")    pieces.push({ icon: "👓", top: "52px", left: "115px", size: "18px" });
+  if (state.wardrobe.outfits === "scarf")    pieces.push({ icon: "🧣", top: "65px", left: "108px", size: "20px" });
+  if (state.wardrobe.outfits === "backpack") pieces.push({ icon: "🎒", top: "55px", left: "40px", size: "22px" });
+  if (state.wardrobe.shoes === "red")        pieces.push({ icon: "👟", top: "95px", left: "55px", size: "16px" });
+  if (state.wardrobe.shoes === "sport")      pieces.push({ icon: "🏃", top: "95px", left: "85px", size: "16px" });
+  for (const p of pieces) {
+    const el = document.createElement("div");
+    el.className = "turtle-decor";
+    el.style.cssText = `position:absolute;font-size:${p.size};top:${p.top};left:${p.left};pointer-events:none;transform:translate(-50%,-50%);`;
+    el.textContent = p.icon;
+    wrap.appendChild(el);
+  }
+}
+
+// ===== 主循环 =====
+let lastSecond = Date.now();
+function tick() {
+  const now = Date.now();
+  const dt = (now - lastSecond) / 1000;
+  lastSecond = now;
+
+  // 每秒收益
+  const rate = getCoinRate();
+  state.coins += rate * dt;
+  state.age += dt;
+  state.expInLevel += dt;
+
+  // 状态自然下降（每秒）
+  state.hungry = clamp(state.hungry - 0.3 * dt, 0, 100);
+  state.mood   = clamp(state.mood   - 0.25 * dt, 0, 100);
+  state.clean  = clamp(state.clean  - 0.2  * dt, 0, 100);
+
+  // 心情/饱食太低时收益减少（getCoinRate 已按平均状态算）
+  checkLevelUp();
+  render();
+  save();
+}
+setInterval(tick, 1000);
+
+// 离开页面时保存
+window.addEventListener("beforeunload", save);
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) save();
+});
+
+// ===== 气泡生成 =====
+function makeBubble() {
+  const pond = document.getElementById("pond");
+  const b = document.createElement("div");
+  b.className = "bubble";
+  const size = 4 + Math.random() * 10;
+  b.style.width = size + "px";
+  b.style.height = size + "px";
+  b.style.left = (5 + Math.random() * 90) + "%";
+  b.style.animationDuration = (3 + Math.random() * 3) + "s";
+  pond.appendChild(b);
+  setTimeout(() => b.remove(), 6000);
+}
+setInterval(makeBubble, 800);
+
+// ===== BGM + 音效（Web Audio 合成，无需外部文件） =====
+let bgmCtx = null, bgmGain = null, bgmOn = true, bgmStep = 0, bgmTimer = null;
+const BGM_TEMPO = 112;
+const BGM_MELODY = [
+  {m:76,d:1},{m:79,d:1},{m:81,d:1},{m:84,d:2},{m:81,d:1},{m:79,d:1},
+  {m:76,d:2},{m:74,d:1},{m:76,d:1},{m:79,d:1},{m:74,d:2},{m:72,d:2},
+  {m:74,d:1},{m:76,d:1},{m:81,d:1},{m:79,d:1},{m:76,d:2},{m:72,d:1},{m:74,d:1},
+  {m:76,d:2},{m:79,d:1},{m:81,d:1},{m:84,d:2},{m:81,d:1},{m:79,d:1},
+  {m:76,d:2},{m:74,d:1},{m:72,d:1},{m:74,d:2},{m:72,d:1},{m:69,d:1},{m:72,d:2}
+];
+const BGM_BASS = [
+  {m:48,d:2},{m:48,d:1},{m:55,d:1},{m:53,d:2},{m:55,d:1},{m:53,d:1},
+  {m:52,d:2},{m:50,d:2},{m:48,d:2},{m:50,d:2},
+  {m:48,d:2},{m:55,d:2},{m:53,d:2},{m:50,d:2},
+  {m:48,d:2},{m:55,d:2},{m:52,d:2},{m:50,d:1},{m:53,d:1}
+];
+function midiToFreq(m){ return m<=0?0:440*Math.pow(2,(m-69)/12); }
+function ensureBGM(){
+  if(bgmCtx) return;
+  bgmCtx = new (window.AudioContext||window.webkitAudioContext)();
+  bgmGain = bgmCtx.createGain();
+  bgmGain.gain.value = 0.16;
+  bgmGain.connect(bgmCtx.destination);
+}
+function playNote(m, when, dur, type, vol){
+  if(m<=0) return;
+  const osc = bgmCtx.createOscillator();
+  const g = bgmCtx.createGain();
+  osc.type = type; osc.frequency.value = midiToFreq(m);
+  g.gain.setValueAtTime(0.0001, when);
+  g.gain.exponentialRampToValueAtTime(vol, when+0.03);
+  g.gain.exponentialRampToValueAtTime(0.0001, when+dur);
+  osc.connect(g); g.connect(bgmGain);
+  osc.start(when); osc.stop(when+dur+0.05);
+}
+function scheduleBGM(){
+  if(!bgmCtx || !bgmOn) return;
+  const beat = 60/BGM_TEMPO;
+  const startS = bgmCtx.currentTime + 0.1;
+  let t = 0;
+  for(let i=0;i<8;i++){
+    const k = (bgmStep+i) % Math.max(BGM_MELODY.length, BGM_BASS.length);
+    const mel = BGM_MELODY[k % BGM_MELODY.length];
+    const bas = BGM_BASS[k % BGM_BASS.length];
+    playNote(mel.m, startS+t, mel.d*beat*0.9, "triangle", 0.25);
+    playNote(bas.m, startS+t, bas.d*beat*0.9, "sine", 0.30);
+    t += mel.d*beat;
+  }
+  bgmStep += 8;
+  bgmTimer = setTimeout(scheduleBGM, Math.max(50, t*1000 - 200));
+}
+function toggleBGM(){
+  ensureBGM();
+  bgmCtx.resume();
+  if(bgmOn){ bgmOn=false; clearTimeout(bgmTimer); }
+  else { bgmOn=true; bgmStep=0; scheduleBGM(); }
+  document.getElementById("bgmTxt").textContent = bgmOn?"音乐":"静音";
+  document.getElementById("bgmBtn").style.opacity = bgmOn?1:0.5;
+}
+function sfxPlay(freq0, freq1, dur, type, vol, sweep){
+  if(!bgmCtx) ensureBGM();
+  if(!bgmCtx) return;
+  const t = bgmCtx.currentTime;
+  const osc = bgmCtx.createOscillator();
+  const g = bgmCtx.createGain();
+  osc.type = type;
+  osc.frequency.setValueAtTime(freq0, t);
+  if(sweep) osc.frequency.exponentialRampToValueAtTime(freq1, t+dur);
+  else osc.frequency.setValueAtTime(freq1, t);
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(vol, t+0.01);
+  g.gain.exponentialRampToValueAtTime(0.0001, t+dur);
+  osc.connect(g); g.connect(bgmGain);
+  osc.start(t); osc.stop(t+dur+0.03);
+}
+function sfxJump(){ sfxPlay(300, 700, 0.22, "triangle", 0.25, true); }
+function sfxStomp(){ sfxPlay(500, 120, 0.18, "square", 0.28, true); }
+function sfxCoin(){ sfxPlay(880, 1320, 0.12, "triangle", 0.22, true); }
+function sfxLevel(){ sfxPlay(523, 784, 0.1, "triangle", 0.3, false); setTimeout(()=>sfxPlay(659,988,0.1,"triangle",0.3,false),90); setTimeout(()=>sfxPlay(784,1175,0.14,"triangle",0.3,false),180); }
+function sfxBoost(){ sfxPlay(200, 900, 0.25, "sine", 0.2, true); }
+function sfxFeed(){ sfxPlay(400, 300, 0.1, "triangle", 0.2, true); }
+document.addEventListener("pointerdown", function once(){
+  ensureBGM(); bgmCtx.resume();
+  scheduleBGM();
+  document.removeEventListener("pointerdown", once);
+}, { once:true });
+
+// ===== 启动 =====
+settleOffline();
+applyTurtleSkin();
+render();
+
+// ============================================================
+// 登录 + 云端存档 + 广场后端（接 Supabase）
+// ============================================================
+const SUPABASE_URL = "https://qokwygraqbeinjmgphkh.supabase.co";
+const SUPABASE_KEY = "sb_publishable_btQ_-cpMBxPgiOmVisYH9w_v_XhDP-6";
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let authMode = "login";       // "login" | "register"
+let currentUser = null;       // 当前登录的用户名
+
+// ---- 密码哈希（SHA-256，纯前端，无需额外库） ----
+async function hashPass(pw) {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode("turtle-salt-" + pw));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
+// ---- 随机名字（搞笑50% / 可爱25% / 山水25%） ----
+const NAME_FUN_A = ["龟丞相","王八蛋","龟仙人","忍者神龟","老龟头","龟速司机","慢动作","缩头大师","千年老王八","龟中豪杰"];
+const NAME_FUN_B = ["泡","炖","烤","炸","红烧","清蒸","麻辣","佛跳墙","铁锅","火锅"];
+const NAME_CUTE_A = ["壳壳","绿小豆","噗噗","团团","软软","球球","呆瓜","咘咘","圆圆","糯糯"];
+const NAME_CUTE_B = ["龟","龟龟","小绿","青壳","豆豆","仔仔","宝","乖乖","呆呆","乖乖"];
+const NAME_SHAN_A = ["青苔","碧波","沧浪","流云","听雨","沐风","观潮","枕石","临渊","拾翠"];
+const NAME_SHAN_B = ["客","仙","子","君","翁","生","侠","隐","禅","樵"];
+function randomName() {
+  const roll = Math.random();
+  let name;
+  if (roll < 0.5) {
+    // 搞笑 50%
+    const a = NAME_FUN_A[Math.floor(Math.random()*NAME_FUN_A.length)];
+    const b = NAME_FUN_B[Math.floor(Math.random()*NAME_FUN_B.length)];
+    name = Math.random() < 0.5 ? a : (b + a);
+  } else if (roll < 0.75) {
+    // 可爱 25%
+    const a = NAME_CUTE_A[Math.floor(Math.random()*NAME_CUTE_A.length)];
+    const b = NAME_CUTE_B[Math.floor(Math.random()*NAME_CUTE_B.length)];
+    name = Math.random() < 0.5 ? a + b : b + a;
+  } else {
+    // 山水 25%
+    const a = NAME_SHAN_A[Math.floor(Math.random()*NAME_SHAN_A.length)];
+    const b = NAME_SHAN_B[Math.floor(Math.random()*NAME_SHAN_B.length)];
+    name = a + b;
+  }
+  if (name.length > 16) name = name.slice(0, 16);
+  const userInput = document.getElementById("authUser");
+  userInput.value = name;
+  checkNameTaken();   // 随机名字也顺带检测是否被占
+}
+
+// ---- 实时重名检测（注册模式下，用户名失焦时检查，不碰登录逻辑） ----
+let _nameCheckTimer = null;
+async function checkNameTaken() {
+  const input = document.getElementById("authUser");
+  const user = (input.value || "").trim();
+  const el = document.getElementById("authTaken");
+  if (authMode !== "register" || !user) { el.className = "auth-taken"; el.textContent = ""; return; }
+  if (!/^[a-zA-Z0-9_\u4e00-\u9fa5]{1,16}$/.test(user)) { el.className = "auth-taken checking"; el.textContent = ""; return; }
+  el.className = "auth-taken checking"; el.textContent = "检查名字是否可用…";
+  try {
+    const { data: exist } = await sb.from("profiles").select("username").eq("username", user).maybeSingle();
+    if (exist) { el.className = "auth-taken taken"; el.textContent = "这个名字已被占用，换个试试"; }
+    else { el.className = "auth-taken ok"; el.textContent = "✓ 这个名字可以用"; }
+  } catch (e) {
+    el.className = "auth-taken checking"; el.textContent = "";
+  }
+}
+document.getElementById("authUser").addEventListener("blur", function(){
+  if (authMode === "register") { clearTimeout(_nameCheckTimer); _nameCheckTimer = setTimeout(checkNameTaken, 200); }
+});
+document.getElementById("authUser").addEventListener("input", function(){
+  document.getElementById("authTaken").className = "auth-taken";
+  document.getElementById("authTaken").textContent = "";
+});
+
+// ---- 登录界面控制 ----
+function showAuth() {
+  document.getElementById("authOverlay").classList.remove("hidden");
+  document.getElementById("authBtn").textContent = authMode === "login" ? "登 录" : "注 册";
+  document.getElementById("authSwitchBtn").textContent = authMode === "login" ? "注册新账号" : "返回登录";
+  document.getElementById("authSub").textContent = authMode === "login"
+    ? "登录后存档会保存到云端，换设备也不丢"
+    : "起个用户名 + 密码就能注册，不需要邮箱验证";
+  document.getElementById("authErr").textContent = "";
+}
+function hideAuth() { document.getElementById("authOverlay").classList.add("hidden"); }
+
+function authSwitchMode() {
+  authMode = authMode === "login" ? "register" : "login";
+  showAuth();
+}
+
+async function authSubmit() {
+  const user = document.getElementById("authUser").value.trim();
+  const pass = document.getElementById("authPass").value;
+  const email = document.getElementById("authEmail").value.trim();
+  const errEl = document.getElementById("authErr");
+  errEl.textContent = "";
+
+  if (!user || !pass) { errEl.textContent = "用户名和密码都不能为空"; return; }
+  if (pass.length < 4) { errEl.textContent = "密码至少 4 位"; return; }
+  if (!/^[a-zA-Z0-9_\u4e00-\u9fa5]{1,16}$/.test(user)) { errEl.textContent = "用户名限 1-16 位（中英文/数字/下划线）"; return; }
+
+  const hp = await hashPass(pass);
+  try {
+    if (authMode === "register") {
+      // 检查是否已存在
+      const { data: exist } = await sb.from("profiles").select("username").eq("username", user).maybeSingle();
+      if (exist) { errEl.textContent = "这个用户名已被注册，换个试试"; return; }
+      const { error } = await sb.from("profiles").insert({
+        username: user, password: hp,
+        coins: 0, age_seconds: 0, level: 1, hungry: 100, mood: 100, clean: 100,
+        owned: [], equipped: {}, decor: {}, turtle_name: "小乌龟"
+      });
+      if (error) { errEl.textContent = "注册失败：" + error.message; return; }
+      toast("✅ 注册成功，已登录");
+    } else {
+      const { data: row } = await sb.from("profiles").select("*").eq("username", user).maybeSingle();
+      if (!row) { errEl.textContent = "用户名不存在，点下面注册一个"; return; }
+      if (row.password !== hp) { errEl.textContent = "密码不对哦"; return; }
+      toast("✅ 登录成功");
+    }
+    await finishLogin(user);
+  } catch (e) {
+    errEl.textContent = "网络错误：" + e.message;
+  }
+}
+
+async function finishLogin(user) {
+  currentUser = user;
+  localStorage.setItem("turtleUser", user);
+  hideAuth();
+  document.getElementById("currentUser").textContent = user;
+  document.getElementById("logoutBtn").style.display = "inline-block";
+  // 从云端拉取存档覆盖本地
+  await cloudLoad(user);
+  render();
+}
+
+function doLogout() {
+  currentUser = null;
+  localStorage.removeItem("turtleUser");
+  localStorage.removeItem("turtlePet");
+  document.getElementById("currentUser").textContent = "";
+  document.getElementById("logoutBtn").style.display = "none";
+  authMode = "login";
+  showAuth();
+}
+
+// ---- 云端存档同步 ----
+// save() 原样保存到 localStorage（保留原逻辑），额外把 state 同步到云端
+const origSave = save;
+save = function() {
+  state.lastTick = Date.now();
+  localStorage.setItem("turtlePet", JSON.stringify(state));
+  if (currentUser) cloudSave();   // 登录后才同步云端，后台静默
+};
+
+async function cloudSave() {
+  if (!currentUser) return;
+  const row = {
+    turtle_name: state.turtle_name || "小乌龟",
+    coins: Math.floor(state.coins),
+    age_seconds: Math.floor(state.age),
+    level: state.level,
+    hungry: Math.round(state.hungry),
+    mood: Math.round(state.mood),
+    clean: Math.round(state.clean),
+    skin: state.skin || "default",
+    owned: state.owned || [],
+    equipped: state.equipped || {},
+    decor: state.decor || {},
+    updated_at: new Date().toISOString()
+  };
+  try {
+    await sb.from("profiles").update(row).eq("username", currentUser);
+  } catch (e) { /* 静默失败，不影响本地玩 */ }
+}
+
+async function cloudLoad(user) {
+  try {
+    const { data: row } = await sb.from("profiles").select("*").eq("username", user).maybeSingle();
+    if (row && (row.coins > 0 || row.age_seconds > 0 || row.skin !== "default")) {
+      // 云端有存档，用云端的
+      state.coins = row.coins || 0;
+      state.age = row.age_seconds || 0;
+      state.level = row.level || 1;
+      state.hungry = row.hungry ?? 100;
+      state.mood = row.mood ?? 100;
+      state.clean = row.clean ?? 100;
+      state.skin = row.skin || "default";
+      state.owned = row.owned || [];
+      state.equipped = row.equipped || {};
+      state.decor = row.decor || {};
+      state.turtle_name = row.turtle_name || "小乌龟";
+      toast("☁️ 已载入云端存档");
+    }
+  } catch (e) { /* 读取失败则用本地 */ }
+}
+
+// ---- 广场：读取所有玩家真实乌龟 ----
+// 人机乌龟（名字正常，像真玩家，让广场不冷清）
+const TURTLE_BOTS = [
+  { name: "小番茄", id: "T-4120", level: 5, coins: 900, shell: "#7fc4dd" },
+  { name: "布丁奶茶", id: "T-3851", level: 4, coins: 620, shell: "#a8b8e0" },
+  { name: "可乐泡", id: "T-3532", level: 4, coins: 540, shell: "#6bbf8a" },
+  { name: "圆滚滚", id: "T-3210", level: 3, coins: 420, shell: "#e0a86b" },
+  { name: "椰奶冻", id: "T-2887", level: 3, coins: 360, shell: "#d9b8e8" },
+  { name: "柠檬汽水", id: "T-2510", level: 3, coins: 300, shell: "#b8e05a" },
+  { name: "小芋圆", id: "T-2215", level: 2, coins: 180, shell: "#8fc4e8" },
+  { name: "云朵兔", id: "T-1988", level: 2, coins: 140, shell: "#e8c8b8" },
+  { name: "青柠苏打", id: "T-1650", level: 2, coins: 110, shell: "#8ad1a2" },
+  { name: "奶香包", id: "T-1322", level: 1, coins: 60, shell: "#f0d6a8" }
+];
+
+function renderPlaza() {
+  const myCard = {
+    name: state.name || currentUser || "我",
+    id: "T-" + (state.age | 0),
+    level: state.level,
+    coins: Math.floor(state.coins),
+    shell: LEVELS[getCurrentLevelIdx()].shellColor,
+    me: true
+  };
+  // 异步加载所有玩家
+  const grid = document.getElementById("plazaGrid");
+  grid.innerHTML = myCardEl(myCard);
+  document.getElementById("plazaTip").textContent = "正在加载在线同学的小乌龟…";
+  sb.from("profiles").select("username, coins, age_seconds, level, skin").order("coins", { ascending: false }).limit(50)
+    .then(({ data, error }) => {
+      if (error) { document.getElementById("plazaTip").textContent = "广场加载失败：" + error.message; return; }
+      const others = (data || []).filter(p => p.username !== currentUser).map(p => ({
+        name: p.username,
+        id: "T-" + (p.age_seconds | 0),
+        level: p.level || 1,
+        coins: Math.floor(p.coins || 0),
+        shell: (LEVELS.find(l => p.age_seconds >= l.minAge && (l.next === null || p.age_seconds < l.next)) || LEVELS[0]).shellColor
+      }));
+      // 追加人机乌龟（名字正常，像真玩家），让广场不冷清
+      const realNames = new Set((data || []).map(p => p.username));
+      const bots = TURTLE_BOTS.filter(b => !realNames.has(b.name) && b.name !== currentUser);
+      const all = [myCard, ...others, ...bots].sort((a, b) => b.coins - a.coins);
+      grid.innerHTML = all.map(myCardEl).join("");
+      document.getElementById("plazaTip").textContent = others.length
+        ? "所有玩家的小乌龟都在这里 🐢"
+        : "快喊同学来玩，还有邻居小乌龟陪你 🐢";
+    });
+}
+
+function myCardEl(t) {
+  const clickable = t.me ? "" : ` onclick="visitTurtle('${t.name}')" style="cursor:pointer"`;
+  return `
+    <div class="turtle-card ${t.me ? "me" : ""}"${clickable}>
+      <div class="avatar">
+        <svg viewBox="0 0 80 60" width="60">
+          <ellipse cx="40" cy="38" rx="26" ry="18" fill="${t.shell}"/>
+          <circle cx="62" cy="32" r="9" fill="${t.shell}"/>
+          <circle cx="65" cy="30" r="1.5" fill="#222"/>
+        </svg>
+      </div>
+      <div class="tname">${t.name}${t.me ? "（我）" : ""}</div>
+      <div class="tid">${t.id}</div>
+      <div class="tstats">Lv.${t.level} · 🪙${t.coins}</div>
+      ${t.me ? "" : '<div class="visit-hint">👆 点我去他家</div>'}
+    </div>`;
+}
+
+// 拜访别人家（简单版：看乌龟信息 + 留言入口）
+let visiting = null;
+function visitTurtle(name) {
+  visiting = name;
+  document.getElementById("visitOverlay").classList.remove("hidden");
+  renderVisit(name);
+}
+function closeVisit() {
+  visiting = null;
+  document.getElementById("visitOverlay").classList.add("hidden");
+}
+function renderVisit(name) {
+  const bot = TURTLE_BOTS.find(b => b.name === name);
+  const info = bot ? bot : { name: name, level: 1, coins: 0, shell: "#6bbf8a" };
+  document.getElementById("visitName").textContent = info.name + " 的家";
+  document.getElementById("visitLevel").textContent = "Lv." + (info.level || 1);
+  document.getElementById("visitCoins").textContent = "🪙" + (info.coins || 0);
+  document.getElementById("visitShell").innerHTML =
+    '<svg viewBox="0 0 200 160" width="150">' +
+      '<ellipse cx="25" cy="90" rx="10" ry="6" fill="#5a9e6e"/>' +
+      '<ellipse cx="55" cy="125" rx="14" ry="9" fill="#5a9e6e"/>' +
+      '<ellipse cx="130" cy="125" rx="14" ry="9" fill="#5a9e6e"/>' +
+      '<ellipse cx="55" cy="55" rx="12" ry="8" fill="#6ab57e"/>' +
+      '<ellipse cx="130" cy="55" rx="12" ry="8" fill="#6ab57e"/>' +
+      '<ellipse cx="90" cy="90" rx="60" ry="45" fill="' + info.shell + '"/>' +
+      '<ellipse cx="90" cy="90" rx="45" ry="32" fill="none" stroke="rgba(0,0,0,0.2)" stroke-width="2"/>' +
+      '<circle cx="155" cy="85" r="22" fill="#7ccb92"/>' +
+      '<circle cx="163" cy="80" r="4" fill="#2c3e50"/>' +
+      '<circle cx="164" cy="79" r="1.3" fill="white"/>' +
+      '<path d="M 165 92 Q 170 95 175 92" stroke="#2c3e50" stroke-width="1.5" fill="none"/>' +
+    '</svg>';
+}
+
+// ---- 启动时检查登录状态 ----
+(function initAuth() {
+  const saved = localStorage.getItem("turtleUser");
+  if (saved) {
+    finishLogin(saved);   // 有记忆就自动登录
+  } else {
+    showAuth();           // 否则显示登录界面
+  }
+})();
+</script>
+</body>
+</html>
